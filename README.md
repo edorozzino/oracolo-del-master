@@ -50,6 +50,7 @@ Il tavolo si salva da solo nel browser: chiudi la pagina e riprendi da dove eri.
 
 | Azione | Come |
 |---|---|
+| Annullare / ripetere | ↶ e ↷ nella barra o in cima al pannello, oppure Ctrl+Z / Ctrl+Maiusc+Z |
 | Muovere una pedina | trascinala |
 | Spostare la mappa | trascina uno spazio vuoto |
 | Zoom | rotella, due dita, o i pulsanti − / + |

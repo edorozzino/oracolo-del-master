@@ -23,7 +23,58 @@
   let salvaTimer;
   function salva() {
     clearTimeout(salvaTimer);
-    salvaTimer = setTimeout(() => { try { localStorage.setItem(CHIAVE, JSON.stringify(stato)); } catch (e) { /* nessun salvataggio */ } }, 300);
+    salvaTimer = setTimeout(scrivi, 300);
+  }
+  function scrivi() {
+    clearTimeout(salvaTimer);
+    registraStoria();
+    try { localStorage.setItem(CHIAVE, JSON.stringify(stato)); } catch (e) { /* nessun salvataggio */ }
+  }
+
+  // ---------------- annulla / ripeti ----------------
+  // Ogni salvataggio confronta il tavolo con l'ultima versione: se è cambiato, la
+  // versione precedente va nella pila di Annulla. Il registro e i tiri di dado restano fuori.
+  const MAX_STORIA = 80;
+  const storia = { indietro: [], avanti: [], ultima: null };
+  const istantanea = () => JSON.stringify({ cols: stato.cols, rows: stato.rows, celle: stato.celle, pedine: stato.pedine,
+    lotta: stato.lotta, scena: stato.scena, prossimoId: stato.prossimoId });
+  function registraStoria() {
+    const ora = istantanea();
+    if (storia.ultima === null) { storia.ultima = ora; return; }
+    if (ora === storia.ultima) return;
+    storia.indietro.push(storia.ultima);
+    if (storia.indietro.length > MAX_STORIA) storia.indietro.shift();
+    storia.avanti = [];
+    storia.ultima = ora;
+    renderStoria();
+  }
+  function applica(json) {
+    const s = JSON.parse(json);
+    Object.assign(stato, s);
+    storia.ultima = json;
+    if (ui.selezionata != null && !trova(ui.selezionata)) ui.selezionata = null;
+    tavolo.terrenoCambiato();
+    aggiorna();
+  }
+  function annulla() {
+    scrivi(); // prima fissa l'ultima modifica ancora in sospeso
+    if (!storia.indietro.length) { toast("Niente da annullare."); return; }
+    storia.avanti.push(storia.ultima);
+    applica(storia.indietro.pop());
+    renderStoria(); toast("Annullato.");
+  }
+  function ripeti() {
+    scrivi();
+    if (!storia.avanti.length) { toast("Niente da ripetere."); return; }
+    storia.indietro.push(storia.ultima);
+    applica(storia.avanti.pop());
+    renderStoria(); toast("Ripetuto.");
+  }
+  function renderStoria() {
+    document.querySelectorAll("[data-storia]").forEach((b) => {
+      const n = b.dataset.storia === "annulla" ? storia.indietro.length : storia.avanti.length;
+      b.disabled = n === 0;
+    });
   }
 
   function registra(testo, tipo = "lotta") {
@@ -750,12 +801,20 @@
     mostraTiro(r.testo, "[" + r.tiri.join(", ") + "]", r.totale);
   });
 
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-storia]"); if (!b) return;
+    if (b.dataset.storia === "annulla") annulla(); else ripeti();
+  });
   document.addEventListener("keydown", (e) => {
     if (/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); e.shiftKey ? ripeti() : annulla(); return; }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") { e.preventDefault(); ripeti(); return; }
     if (e.key === "Escape") { ui.selezionata = null; aggiorna(); }
     if ((e.key === "Delete" || e.key === "Backspace") && ui.selezionata != null) { e.preventDefault(); rimuovi(ui.selezionata); }
     if (e.key === "n" && stato.lotta.attiva) passaTurno(1);
   });
 
   aggiorna();
+  scrivi();
+  renderStoria();
 })();

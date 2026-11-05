@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,400;0,700;1,400&family=Alegreya+Sans+SC:wght@500;700&family=IM+Fell+English+SC&display=swap">
-<link rel="stylesheet" href="src/style.css?v=202611051402">
+<link rel="stylesheet" href="src/style.css?v=202611052033">
 </head>
 <body>
 <div class="app">
@@ -36,6 +36,10 @@
           <button type="button" id="mode-erase" data-modo="gomma" class="seg-btn" aria-pressed="false">Gomma</button>
           <button type="button" id="mode-room" data-modo="stanza" class="seg-btn" aria-pressed="false">Stanza</button>
           <button type="button" id="mode-add" data-modo="posa" class="seg-btn" aria-pressed="false">Aggiungi</button>
+        </div>
+        <div class="seg" role="group" aria-label="Annulla e ripeti">
+          <button type="button" class="seg-btn" data-storia="annulla" title="Annulla (Ctrl+Z)" aria-label="Annulla" disabled>↶</button>
+          <button type="button" class="seg-btn" data-storia="ripeti" title="Ripeti (Ctrl+Maiusc+Z)" aria-label="Ripeti" disabled>↷</button>
         </div>
         <div class="seg" role="group" aria-label="Vista">
           <button type="button" id="view-iso" class="seg-btn" aria-pressed="true">3D</button>
@@ -69,6 +73,10 @@
 
     <aside class="panel" id="panel">
       <button type="button" class="panel-close only-game" id="panel-close">Chiudi pannello</button>
+      <div class="panel-storia">
+        <button type="button" class="btn-ghost" data-storia="annulla" disabled>↶ Annulla</button>
+        <button type="button" class="btn-ghost" data-storia="ripeti" disabled>Ripeti ↷</button>
+      </div>
       <nav class="tabs" role="tablist" aria-label="Sezioni">
         <button type="button" role="tab" id="t-scena" aria-controls="p-scena" aria-selected="true">Scena</button>
         <button type="button" role="tab" id="t-pedine" aria-controls="p-pedine" aria-selected="false">Pedine</button>
@@ -159,13 +167,13 @@
     </aside>
   </div>
 </div>
-<script src="src/data.js?v=202611051402"></script>
-<script src="src/generator.js?v=202611051402"></script>
-<script src="src/bestiario.js?v=202611051402"></script>
-<script src="src/mapgen.js?v=202611051402"></script>
-<script src="src/figure.js?v=202611051402"></script>
-<script src="src/iso.js?v=202611051402"></script>
-<script src="src/board.js?v=202611051402"></script>
-<script src="src/app.js?v=202611051402"></script>
+<script src="src/data.js?v=202611052033"></script>
+<script src="src/generator.js?v=202611052033"></script>
+<script src="src/bestiario.js?v=202611052033"></script>
+<script src="src/mapgen.js?v=202611052033"></script>
+<script src="src/figure.js?v=202611052033"></script>
+<script src="src/iso.js?v=202611052033"></script>
+<script src="src/board.js?v=202611052033"></script>
+<script src="src/app.js?v=202611052033"></script>
 </body>
 </html>
