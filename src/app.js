@@ -1,154 +1,503 @@
 (function () {
-  const { CARDS, draw, newSeed, toText } = window.Oracolo;
-  const STORE_KEY = "oracolo-scene-salvate";
+  const { TERRENI, ID, AMBIENTI } = window.Mappe;
+  const B = window.BESTIARIO, AB = window.ABITANTI, DIFF = window.DIFFICOLTA;
+  const CHIAVE = "oracolo-tavolo-v1";
+  const COLORI_PG = ["#3f7fbf", "#8a5cc2", "#2e9c8f", "#c79a2e", "#3b8f4a", "#b05a8f"];
+  const COLORI_MOSTRI = ["#a8382c", "#7d2f2a", "#8a4b1f", "#5d6b2f", "#6b3f6e", "#4b4f57"];
 
-  let seeds = [];
-  let locked = CARDS.map(() => false);
-  let scene = [];
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-  const $table = document.getElementById("table");
-  const $status = document.getElementById("status");
-  const $saved = document.getElementById("saved-list");
+  // ---------------- stato ----------------
+  let stato = carica() || null;
+  const ui = { modo: "muovi", pennello: ID.muro, selezionata: null, tab: "scena", adv: "normale" };
 
-  // ---------- stato da link ----------
-  function readHash() {
-    const parts = location.hash.replace(/^#/, "").split("-");
-    if (parts.length !== CARDS.length) return null;
-    const nums = parts.map((p) => parseInt(p, 36));
-    return nums.every((n) => Number.isFinite(n) && n > 0) ? nums : null;
+  function carica() {
+    try {
+      const s = JSON.parse(localStorage.getItem(CHIAVE));
+      return s && Array.isArray(s.celle) && Array.isArray(s.pedine) ? s : null;
+    } catch (e) { return null; }
   }
-  function writeHash() {
-    const h = "#" + seeds.map((s) => s.toString(36)).join("-");
-    try { history.replaceState(null, "", h); } catch (e) { /* ignorato */ }
+  let salvaTimer;
+  function salva() {
+    clearTimeout(salvaTimer);
+    salvaTimer = setTimeout(() => { try { localStorage.setItem(CHIAVE, JSON.stringify(stato)); } catch (e) { /* nessun salvataggio */ } }, 300);
   }
 
-  // ---------- disegno ----------
-  function cardHTML(card, r, i) {
-    const meta = r.meta.map(([k, v]) => `<li><span>${k}</span>${v}</li>`).join("");
-    return `
-      <div class="card-inner">
-        <div class="card-head">
-          <span class="card-kind"><span class="glyph" aria-hidden="true">${card.glyph}</span>${card.label}</span>
-          <span class="die" title="Tiro di d${card.die}">d${card.die} · <b>${r.roll}</b></span>
-        </div>
-        <h2>${r.title}</h2>
-        <div style="display:grid;gap:10px;align-content:start">
-          <p>${r.body}</p>
-          ${meta ? `<ul class="meta">${meta}</ul>` : ""}
-        </div>
-        <div class="card-foot">
-          <button type="button" id="lock-${card.id}" data-act="lock" data-i="${i}" aria-pressed="${locked[i]}">${locked[i] ? "Bloccata" : "Blocca"}</button>
-          <button type="button" id="reroll-${card.id}" data-act="reroll" data-i="${i}">Rilancia</button>
-        </div>
+  function registra(testo, tipo = "lotta") {
+    stato.registro.unshift({ testo, tipo, ora: new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }) });
+    stato.registro = stato.registro.slice(0, 60);
+  }
+  function toast(testo) {
+    const t = $("toast"); t.textContent = testo; t.classList.add("on");
+    clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("on"), 2200);
+  }
+
+  // ---------------- pedine ----------------
+  function occupate(escludi) {
+    const s = new Set();
+    for (const t of stato.pedine) if (t.id !== escludi) for (let j = 0; j < t.taglia; j++) for (let i = 0; i < t.taglia; i++) s.add((t.x + i) + "," + (t.y + j));
+    return s;
+  }
+  function posa(t, px, py, occ) {
+    const cand = window.Mappe.posizioniLibere(stato.celle, stato.cols, stato.rows, px, py, 400, new Set(occ));
+    const libera = (x, y) => occ.has(x + "," + y) === false && x < stato.cols && y < stato.rows &&
+      window.Mappe.passabile(stato.celle[y * stato.cols + x]);
+    const p = cand.find((c) => { for (let j = 0; j < t.taglia; j++) for (let i = 0; i < t.taglia; i++) if (!libera(c.x + i, c.y + j)) return false; return true; }) || cand[0];
+    if (p) { t.x = Math.min(p.x, stato.cols - t.taglia); t.y = Math.min(p.y, stato.rows - t.taglia); }
+    for (let j = 0; j < t.taglia; j++) for (let i = 0; i < t.taglia; i++) occ.add((t.x + i) + "," + (t.y + j));
+  }
+  function nuovaPedina(dati) {
+    return Object.assign({ id: stato.prossimoId++, x: 0, y: 0, taglia: 1, condizioni: [], iniziativa: null, vel: 30 }, dati);
+  }
+  function nomeUnico(base) {
+    const usati = new Set(stato.pedine.map((p) => p.nome));
+    for (let n = 1; ; n++) { const nome = base + " " + n; if (!usati.has(nome)) return nome; }
+  }
+  function creaMostro(chiave) {
+    const m = B[chiave];
+    const colore = COLORI_MOSTRI[Object.keys(B).indexOf(chiave) % COLORI_MOSTRI.length];
+    return nuovaPedina({ tipo: "mostro", razza: chiave, nome: nomeUnico(m.nome), colore, pf: m.pf, pfMax: m.pf, ca: m.ca, init: m.init, vel: m.vel, taglia: m.taglia, gs: m.gs });
+  }
+  function creaPG(i) {
+    const base = window.PG_BASE[i % window.PG_BASE.length];
+    const nome = stato.pedine.some((p) => p.nome === base.nome) ? nomeUnico("Eroe") : base.nome;
+    return nuovaPedina({ tipo: "pg", nome, colore: COLORI_PG[i % COLORI_PG.length], pf: base.pf, pfMax: base.pf, ca: base.ca, init: base.init, vel: base.vel });
+  }
+  const trova = (id) => stato.pedine.find((p) => p.id === id);
+
+  // ---------------- scena ----------------
+  function generaScena(ambiente, diff) {
+    const seed = window.Oracolo.newSeed();
+    const m = window.Mappe.genera(ambiente, seed);
+    const pg = stato ? stato.pedine.filter((p) => p.tipo === "pg") : [];
+    const registro = stato ? stato.registro : [];
+    stato = { cols: m.cols, rows: m.rows, celle: m.celle, pedine: [], registro, prossimoId: stato ? stato.prossimoId : 1,
+      scena: null, lotta: { attiva: false, round: 1, indice: 0, ordine: [] } };
+    const occ = new Set();
+    const eroi = pg.length ? pg : window.PG_BASE.map((_, i) => creaPG(i));
+    eroi.forEach((t) => { t.condizioni = []; t.iniziativa = null; posa(t, m.punti.pg[0], m.punti.pg[1], occ); stato.pedine.push(t); });
+
+    const rng = window.Oracolo.mulberry32(seed ^ 0x5bd1e995);
+    const d = DIFF[diff], ab = AB[ambiente];
+    const capoKey = d.capo ? ab.capi[Math.floor(rng() * ab.capi.length)] : null;
+    if (capoKey) { const c = creaMostro(capoKey); posa(c, m.punti.boss[0], m.punti.boss[1], occ); stato.pedine.push(c); }
+    for (let k = 0; k < d.gregari; k++) {
+      const key = ab.gregari[Math.floor(rng() * ab.gregari.length)];
+      const t = creaMostro(key); posa(t, m.punti.mostri[0], m.punti.mostri[1], occ); stato.pedine.push(t);
+    }
+
+    const C = window.Oracolo.CARDS;
+    const atm = window.Oracolo.draw(C[1], window.Oracolo.newSeed());
+    const png = window.Oracolo.draw(C[2], window.Oracolo.newSeed());
+    const gancio = window.Oracolo.draw(C[5], window.Oracolo.newSeed());
+    const titoli = AMBIENTI[ambiente].titoli;
+    stato.scena = {
+      ambiente, diff,
+      titolo: titoli[Math.floor(rng() * titoli.length)],
+      atmosfera: atm.title + ". " + atm.body,
+      gancio: gancio.body,
+      png: png.title + ": " + png.body + " Segreto: " + png.meta[0][1] + "."
+    };
+    ui.selezionata = null;
+    registra("Nuova scena: " + stato.scena.titolo + " (" + d.nome.toLowerCase() + ").", "scena");
+    tavolo && tavolo.terrenoCambiato();
+    tavolo && tavolo.adatta();
+    aggiorna();
+  }
+
+  // ---------------- combattimento ----------------
+  const vivo = (t) => t && (t.pf > 0 || t.tipo === "pg");
+  function iniziaLotta() {
+    const righe = [];
+    for (const t of stato.pedine) {
+      const r = window.Dadi.d20(t.init || 0);
+      t.iniziativa = r.totale; righe.push(t.nome + " (" + r.totale + ")");
+    }
+    ordinaIniziativa();
+    Object.assign(stato.lotta, { attiva: true, round: 1, indice: 0 });
+    registra("Iniziativa: " + righe.join(", ") + ".");
+    registra("Round 1 · tocca a " + trova(stato.lotta.ordine[0]).nome + ".");
+    aggiorna();
+  }
+  function ordinaIniziativa() {
+    const attuale = stato.lotta.attiva ? stato.lotta.ordine[stato.lotta.indice] : null;
+    stato.lotta.ordine = stato.pedine.slice()
+      .sort((a, b) => (b.iniziativa ?? -99) - (a.iniziativa ?? -99) || (b.init || 0) - (a.init || 0))
+      .map((t) => t.id);
+    if (attuale != null) stato.lotta.indice = Math.max(0, stato.lotta.ordine.indexOf(attuale));
+  }
+  function turnoCorrente() { return stato.lotta.attiva ? stato.lotta.ordine[stato.lotta.indice] : null; }
+  function passaTurno(dir) {
+    const L = stato.lotta; if (!L.attiva || !L.ordine.length) return;
+    for (let k = 0; k < L.ordine.length; k++) {
+      L.indice += dir;
+      if (L.indice >= L.ordine.length) { L.indice = 0; L.round++; }
+      if (L.indice < 0) { L.indice = L.ordine.length - 1; L.round = Math.max(1, L.round - 1); }
+      if (vivo(trova(L.ordine[L.indice]))) break;
+    }
+    const t = trova(turnoCorrente());
+    if (t) { registra("Round " + L.round + " · tocca a " + t.nome + "."); ui.selezionata = t.id; }
+    aggiorna();
+  }
+  function fineLotta() {
+    stato.lotta.attiva = false;
+    stato.pedine.forEach((t) => (t.iniziativa = null));
+    registra("Combattimento terminato.");
+    aggiorna();
+  }
+  function modificaPF(t, delta) {
+    if (!t) return;
+    const prima = t.pf;
+    t.pf = Math.max(t.tipo === "pg" ? -t.pfMax : 0, Math.min(t.pfMax, t.pf + delta));
+    if (t.pf === prima) return;
+    registra(t.nome + (delta < 0 ? " subisce " + (-delta) + " danni" : " recupera " + delta + " PF") + " (" + t.pf + "/" + t.pfMax + ")." +
+      (t.pf <= 0 && prima > 0 ? (t.tipo === "pg" ? " È a terra!" : " Sconfitto.") : ""));
+    aggiorna();
+  }
+  function rimuovi(id) {
+    const t = trova(id); if (!t) return;
+    const corrente = turnoCorrente();
+    stato.pedine = stato.pedine.filter((p) => p.id !== id);
+    if (stato.lotta.attiva) {
+      stato.lotta.ordine = stato.lotta.ordine.filter((x) => x !== id);
+      const i = stato.lotta.ordine.indexOf(corrente);
+      stato.lotta.indice = i >= 0 ? i : Math.min(stato.lotta.indice, Math.max(0, stato.lotta.ordine.length - 1));
+      if (!stato.lotta.ordine.length) stato.lotta.attiva = false;
+    }
+    if (ui.selezionata === id) ui.selezionata = null;
+    registra(t.nome + " lascia il tavolo.", "scena");
+    aggiorna();
+  }
+  function aggiungi(t) {
+    const occ = occupate();
+    const c = { x: stato.cols / 2, y: stato.rows / 2 };
+    const sel = trova(ui.selezionata); if (sel) { c.x = sel.x; c.y = sel.y; }
+    posa(t, c.x, c.y, occ);
+    stato.pedine.push(t);
+    if (stato.lotta.attiva) { t.iniziativa = window.Dadi.d20(t.init || 0).totale; ordinaIniziativa(); registra(t.nome + " entra in combattimento (iniziativa " + t.iniziativa + ")."); }
+    ui.selezionata = t.id;
+    aggiorna();
+  }
+
+  // ---------------- disegno pannelli ----------------
+  function barraPF(t) {
+    const f = t.pfMax ? Math.max(0, Math.min(1, t.pf / t.pfMax)) : 0;
+    const cls = t.pf <= 0 ? "ko" : f > .5 ? "ok" : f > .25 ? "warn" : "bad";
+    return `<span class="hpbar ${cls}"><span style="width:${(f * 100).toFixed(0)}%"></span></span>`;
+  }
+
+  function renderIntestazione() {
+    const s = stato.scena;
+    $("scene-head").innerHTML = s ? `<span class="scene-kicker">${esc(AMBIENTI[s.ambiente].nome)} · ${esc(DIFF[s.diff].nome)}</span><span class="scene-title">${esc(s.titolo)}</span>` : "";
+    $("scene-card").innerHTML = s ? `
+      <h2>La scena</h2>
+      <dl class="scene-dl">
+        <div><dt>Atmosfera</dt><dd>${esc(s.atmosfera)}</dd></div>
+        <div><dt>Chi c'è</dt><dd>${esc(s.png)}</dd></div>
+        <div><dt>Spunto</dt><dd>${esc(s.gancio)}</dd></div>
+      </dl>` : "";
+  }
+
+  function renderBanner() {
+    const L = stato.lotta, b = $("turn-banner");
+    b.hidden = !L.attiva;
+    if (!L.attiva) return;
+    const t = trova(turnoCorrente());
+    $("turn-text").innerHTML = `<span class="round">Round ${L.round}</span> Turno di <b>${esc(t ? t.nome : "—")}</b>` +
+      (t ? ` <span class="muted">· ${t.vel} ft di movimento</span>` : "");
+  }
+
+  function renderHud() {
+    const t = trova(ui.selezionata), h = $("hud");
+    h.hidden = !t;
+    if (!t) return;
+    h.innerHTML = `
+      <div class="hud-head"><span class="dot" style="background:${esc(t.colore)}"></span><b>${esc(t.nome)}</b>
+        <button type="button" class="x" data-hud="chiudi" aria-label="Chiudi">×</button></div>
+      <div class="hud-stats">${barraPF(t)}<span class="num">${t.pf}/${t.pfMax} PF</span><span class="num">CA ${t.ca}</span><span class="num">${t.vel} ft</span></div>
+      ${t.condizioni.length ? `<div class="chips small">${t.condizioni.map((c) => `<span class="chip on">${esc(c)}</span>`).join("")}</div>` : ""}
+      <div class="hud-btns">
+        <button type="button" data-hud="-5">−5</button><button type="button" data-hud="-1">−1</button>
+        <button type="button" data-hud="1">+1</button><button type="button" data-hud="5">+5</button>
+        <button type="button" data-hud="scheda" class="wide">Scheda</button>
       </div>`;
   }
 
-  function render(flipIdx) {
-    scene = CARDS.map((c, i) => draw(c, seeds[i]));
-    if (!$table.children.length) {
-      $table.innerHTML = CARDS.map((c) => `<article class="card" id="card-${c.id}"></article>`).join("");
-    }
-    CARDS.forEach((c, i) => {
-      const el = $table.children[i];
-      el.innerHTML = cardHTML(c, scene[i], i);
-      el.classList.toggle("locked", locked[i]);
-      if (flipIdx && flipIdx.includes(i)) {
-        el.classList.remove("flip"); void el.offsetWidth; el.classList.add("flip");
-      }
-    });
-    writeHash();
+  function renderPalette() {
+    $("palette").innerHTML = TERRENI.map((t, i) => `
+      <button type="button" class="swatch" data-terreno="${i}" aria-pressed="${ui.modo === "pennello" && ui.pennello === i}">
+        <span class="sw" style="background:${t.col}"></span>${esc(t.nome)}</button>`).join("");
+    const chip = $("brush-chip");
+    chip.hidden = ui.modo !== "pennello";
+    chip.innerHTML = `<span class="sw" style="background:${TERRENI[ui.pennello].col}"></span>${esc(TERRENI[ui.pennello].nome)}`;
+    $("mode-move").setAttribute("aria-pressed", ui.modo === "muovi");
+    $("mode-paint").setAttribute("aria-pressed", ui.modo === "pennello");
   }
 
-  function rollAll() {
-    const changed = [];
-    seeds = seeds.map((s, i) => (locked[i] ? s : (changed.push(i), newSeed())));
-    render(changed);
-    say(changed.length ? "Nuova scena pescata." : "Tutte le carte sono bloccate.");
+  function renderLista() {
+    const pg = stato.pedine.filter((t) => t.tipo === "pg"), mo = stato.pedine.filter((t) => t.tipo !== "pg");
+    const riga = (t) => `
+      <li><button type="button" class="token-row${t.id === ui.selezionata ? " sel" : ""}${t.pf <= 0 ? " down" : ""}" data-sel="${t.id}">
+        <span class="dot" style="background:${esc(t.colore)}"></span>
+        <span class="tname">${esc(t.nome)}</span>
+        ${barraPF(t)}<span class="num">${t.pf}/${t.pfMax}</span><span class="num muted">CA ${t.ca}</span>
+      </button></li>`;
+    $("token-list").innerHTML =
+      (pg.length ? `<li class="group">Giocatori</li>${pg.map(riga).join("")}` : "") +
+      (mo.length ? `<li class="group">Mostri e PNG</li>${mo.map(riga).join("")}` : "") ||
+      `<li class="empty">Il tavolo è vuoto. Aggiungi un giocatore o un mostro.</li>`;
   }
 
-  function say(msg) {
-    $status.textContent = msg;
-    clearTimeout(say.t);
-    say.t = setTimeout(() => ($status.textContent = ""), 2600);
+  function renderEditor() {
+    const t = trova(ui.selezionata), el = $("editor");
+    if (!t) { el.innerHTML = `<h2>Scheda</h2><p class="note">Tocca una pedina sulla mappa o nella lista per modificarla.</p>`; return; }
+    const colori = t.tipo === "pg" ? COLORI_PG : COLORI_MOSTRI;
+    el.innerHTML = `
+      <h2>Scheda</h2>
+      <label class="field"><span>Nome</span><input id="ed-nome" type="text" value="${esc(t.nome)}" maxlength="28"></label>
+      <div class="field-row four">
+        <label class="field"><span>PF</span><input id="ed-pf" type="number" value="${t.pf}" inputmode="numeric"></label>
+        <label class="field"><span>PF max</span><input id="ed-pfMax" type="number" min="1" value="${t.pfMax}" inputmode="numeric"></label>
+        <label class="field"><span>CA</span><input id="ed-ca" type="number" min="0" value="${t.ca}" inputmode="numeric"></label>
+        <label class="field"><span>Iniz.</span><input id="ed-init" type="number" value="${t.init}" inputmode="numeric"></label>
+      </div>
+      <div class="field-row">
+        <label class="field"><span>Velocità (ft)</span><input id="ed-vel" type="number" min="0" step="5" value="${t.vel}" inputmode="numeric"></label>
+        <label class="field"><span>Taglia</span><select id="ed-taglia">
+          <option value="1"${t.taglia === 1 ? " selected" : ""}>Media (1 casella)</option>
+          <option value="2"${t.taglia === 2 ? " selected" : ""}>Grande (2×2)</option>
+          <option value="3"${t.taglia === 3 ? " selected" : ""}>Enorme (3×3)</option></select></label>
+      </div>
+      <div class="field"><span>Tipo</span>
+        <div class="seg" role="group">
+          <button type="button" class="seg-btn" data-tipo="pg" aria-pressed="${t.tipo === "pg"}">Giocatore</button>
+          <button type="button" class="seg-btn" data-tipo="mostro" aria-pressed="${t.tipo !== "pg"}">Mostro / PNG</button>
+        </div></div>
+      <div class="field"><span>Colore</span><div class="colors">${colori.map((c) =>
+        `<button type="button" class="color${c === t.colore ? " on" : ""}" data-colore="${c}" style="background:${c}" aria-label="Colore ${c}"></button>`).join("")}</div></div>
+      <div class="field"><span>Condizioni</span><div class="chips">${window.CONDIZIONI.map((c) =>
+        `<button type="button" class="chip${t.condizioni.includes(c) ? " on" : ""}" data-cond="${esc(c)}">${esc(c)}</button>`).join("")}</div></div>
+      <div class="row-btns">
+        <button type="button" class="btn-ghost" id="ed-dup">Duplica</button>
+        <button type="button" class="btn-ghost danger" id="ed-del">Rimuovi dal tavolo</button>
+      </div>`;
   }
 
-  // ---------- copia ----------
-  async function copy(text, ok) {
-    try { await navigator.clipboard.writeText(text); say(ok); }
-    catch (e) {
-      const ta = document.createElement("textarea");
-      ta.value = text; document.body.appendChild(ta); ta.select();
-      try { document.execCommand("copy"); say(ok); } catch (e2) { say("Copia non riuscita: seleziona il testo a mano."); }
-      ta.remove();
-    }
-  }
-
-  // ---------- scene salvate (solo su questo browser) ----------
-  function loadSaved() {
-    try { return JSON.parse(localStorage.getItem(STORE_KEY)) || []; } catch (e) { return []; }
-  }
-  function storeSaved(list) {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(list)); return true; } catch (e) { return false; }
-  }
-  function renderSaved() {
-    const list = loadSaved();
-    if (!list.length) {
-      $saved.innerHTML = `<li class="saved-empty">Nessuna scena salvata. Premi “Salva scena” per tenerla qui.</li>`;
+  function renderLotta() {
+    const L = stato.lotta, el = $("combat");
+    if (!L.attiva) {
+      const nPg = stato.pedine.filter((t) => t.tipo === "pg").length, nMo = stato.pedine.length - nPg;
+      el.innerHTML = `
+        <h2>Combattimento</h2>
+        <p class="note">${nPg} giocatori e ${nMo} mostri sul tavolo. L'iniziativa si tira per tutti (d20 + modificatore); puoi correggere i valori dei giocatori dopo.</p>
+        <button type="button" class="btn-main" id="btn-inizia"${stato.pedine.length ? "" : " disabled"}>Tira iniziativa e inizia</button>`;
       return;
     }
-    $saved.innerHTML = list.map((s, i) => `
-      <li>
-        <div class="sname">${s.titolo}<small>${s.quando}</small></div>
-        <div class="controls">
-          <button class="btn-ghost" type="button" data-load="${i}">Apri</button>
-          <button class="btn-ghost" type="button" data-del="${i}">Elimina</button>
-        </div>
-      </li>`).join("");
-  }
-  function saveScene() {
-    const list = loadSaved();
-    list.unshift({
-      titolo: scene[0].title + " — " + scene[2].title,
-      quando: new Date().toLocaleString("it-IT", { dateStyle: "medium", timeStyle: "short" }),
-      seeds: seeds.slice()
-    });
-    if (storeSaved(list.slice(0, 20))) { renderSaved(); say("Scena salvata."); }
-    else say("Il browser non permette di salvare: usa “Copia link”.");
+    const corrente = turnoCorrente();
+    el.innerHTML = `
+      <div class="combat-head"><h2>Round ${L.round}</h2>
+        <div class="row-btns">
+          <button type="button" class="btn-ghost" id="btn-prev">Indietro</button>
+          <button type="button" class="btn-main small" id="btn-next">Prossimo turno</button>
+        </div></div>
+      <ol class="init-list">${L.ordine.map((id) => {
+        const t = trova(id); if (!t) return "";
+        return `<li class="init-row${id === corrente ? " now" : ""}${t.pf <= 0 ? " down" : ""}">
+          <input class="init-val" type="number" id="ini-${id}" data-ini="${id}" value="${t.iniziativa ?? ""}" aria-label="Iniziativa di ${esc(t.nome)}" inputmode="numeric">
+          <button type="button" class="init-name" data-sel="${id}"><span class="dot" style="background:${esc(t.colore)}"></span>${esc(t.nome)}</button>
+          <span class="init-hp">${barraPF(t)}<span class="num">${t.pf}/${t.pfMax}</span></span>
+          <span class="init-act">
+            <input type="number" min="1" id="amt-${id}" data-amt="${id}" placeholder="0" aria-label="Quantità" inputmode="numeric">
+            <button type="button" data-danno="${id}">Danno</button>
+            <button type="button" data-cura="${id}">Cura</button>
+          </span>
+          ${t.condizioni.length ? `<span class="chips small">${t.condizioni.map((c) => `<span class="chip on">${esc(c)}</span>`).join("")}</span>` : ""}
+        </li>`;
+      }).join("")}</ol>
+      <div class="row-btns">
+        <button type="button" class="btn-ghost" id="btn-reroll">Ritira iniziativa</button>
+        <button type="button" class="btn-ghost danger" id="btn-fine">Termina combattimento</button>
+      </div>`;
   }
 
-  // ---------- eventi ----------
-  document.getElementById("roll").addEventListener("click", rollAll);
-  document.getElementById("copy-text").addEventListener("click", () =>
-    copy(toText(scene), "Scena copiata come testo."));
-  document.getElementById("copy-link").addEventListener("click", () =>
-    copy(location.href, "Link della scena copiato."));
-  document.getElementById("save").addEventListener("click", saveScene);
+  function renderLog() {
+    const voci = (filtro) => stato.registro.filter(filtro).slice(0, 30)
+      .map((r) => `<li><span class="t">${esc(r.ora)}</span>${esc(r.testo)}</li>`).join("") || `<li class="empty">Ancora niente.</li>`;
+    $("log-combat").innerHTML = voci((r) => r.tipo !== "dadi");
+    $("log-dadi").innerHTML = voci((r) => r.tipo === "dadi");
+  }
 
-  $table.addEventListener("click", (e) => {
-    const b = e.target.closest("button[data-act]");
-    if (!b) return;
-    const i = Number(b.dataset.i);
-    if (b.dataset.act === "lock") { locked[i] = !locked[i]; render(); }
-    else { seeds[i] = newSeed(); render([i]); }
+  function renderTabs() {
+    for (const k of ["scena", "pedine", "lotta", "dadi"]) {
+      $("t-" + k).setAttribute("aria-selected", ui.tab === k);
+      $("p-" + k).hidden = ui.tab !== k;
+    }
+  }
+
+  function aggiorna(opz = {}) {
+    renderIntestazione(); renderBanner(); renderHud(); renderPalette(); renderLista();
+    if (!opz.tieniEditor) renderEditor();
+    renderLotta(); renderLog(); renderTabs();
+    tavolo && tavolo.disegna();
+    salva();
+  }
+
+  // ---------------- tavolo ----------------
+  let tavolo = null;
+  if (!stato) { stato = null; generaScena("dungeon", "media"); }
+  if (!stato.lotta) stato.lotta = { attiva: false, round: 1, indice: 0, ordine: [] };
+  tavolo = window.Tavolo.crea($("board"), {
+    stato: () => stato,
+    selezionata: () => ui.selezionata,
+    turnoCorrente,
+    modo: () => ui.modo,
+    pennello: () => ui.pennello,
+    seleziona(id) { ui.selezionata = id; aggiorna(); },
+    mossa(t, piedi) {
+      if (stato.lotta.attiva) registra(t.nome + " si muove di " + piedi + " ft.");
+      aggiorna();
+    },
+    dipinto() { salva(); }
   });
-  $saved.addEventListener("click", (e) => {
-    const l = e.target.closest("[data-load]"), d = e.target.closest("[data-del]");
-    const list = loadSaved();
-    if (l) { seeds = list[+l.dataset.load].seeds.slice(); render(CARDS.map((_, i) => i)); say("Scena riaperta."); window.scrollTo({ top: 0, behavior: "smooth" }); }
-    if (d) { list.splice(+d.dataset.del, 1); storeSaved(list); renderSaved(); }
+
+  // ---------------- eventi ----------------
+  $("sel-ambiente").innerHTML = Object.entries(AMBIENTI).map(([k, a]) => `<option value="${k}">${a.nome}</option>`).join("");
+  $("sel-diff").innerHTML = Object.entries(DIFF).map(([k, d]) => `<option value="${k}">${d.nome}</option>`).join("");
+  if (stato.scena) { $("sel-ambiente").value = stato.scena.ambiente; $("sel-diff").value = stato.scena.diff; }
+  $("sel-mostro").innerHTML = Object.entries(B).map(([k, m]) => `<option value="${k}">${m.nome} · GS ${m.gs}</option>`).join("");
+
+  $("btn-genera").addEventListener("click", () => { generaScena($("sel-ambiente").value, $("sel-diff").value); toast("Scena generata."); });
+  $("btn-vuota").addEventListener("click", () => {
+    stato.celle = stato.celle.map(() => ID.pietra); tavolo.terrenoCambiato(); salva(); toast("Mappa svuotata: dipingi la tua.");
+    ui.modo = "pennello"; ui.pennello = ID.muro; aggiorna();
   });
-  document.addEventListener("keydown", (e) => {
-    if (e.code === "Space" && !/INPUT|TEXTAREA|BUTTON/.test(document.activeElement.tagName)) {
-      e.preventDefault(); rollAll();
+
+  $("mode-move").addEventListener("click", () => { ui.modo = "muovi"; renderPalette(); });
+  $("mode-paint").addEventListener("click", () => { ui.modo = "pennello"; renderPalette(); });
+  $("palette").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-terreno]"); if (!b) return;
+    ui.pennello = +b.dataset.terreno; ui.modo = "pennello"; renderPalette();
+  });
+  $("zoom-in").addEventListener("click", () => tavolo.zoom(1.25));
+  $("zoom-out").addEventListener("click", () => tavolo.zoom(0.8));
+  $("zoom-fit").addEventListener("click", () => tavolo.adatta());
+
+  document.querySelector(".tabs").addEventListener("click", (e) => {
+    const b = e.target.closest("[role=tab]"); if (!b) return;
+    ui.tab = b.id.slice(2); renderTabs();
+  });
+
+  $("hud").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-hud]"); if (!b) return;
+    const v = b.dataset.hud, t = trova(ui.selezionata);
+    if (v === "chiudi") { ui.selezionata = null; aggiorna(); }
+    else if (v === "scheda") { ui.tab = "pedine"; renderTabs(); $("p-pedine").scrollIntoView({ behavior: "smooth", block: "start" }); }
+    else modificaPF(t, +v);
+  });
+
+  $("btn-add-pg").addEventListener("click", () => {
+    const n = stato.pedine.filter((p) => p.tipo === "pg").length;
+    aggiungi(creaPG(n)); toast("Giocatore aggiunto: trascinalo dove vuoi.");
+  });
+  $("btn-add-mostro").addEventListener("click", () => { aggiungi(creaMostro($("sel-mostro").value)); toast("Mostro aggiunto."); });
+
+  $("token-list").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-sel]"); if (!b) return;
+    ui.selezionata = +b.dataset.sel; aggiorna();
+  });
+
+  // scheda: modifiche dal vivo senza ridisegnare i campi mentre si scrive
+  $("editor").addEventListener("input", (e) => {
+    const t = trova(ui.selezionata); if (!t) return;
+    const f = e.target.id.replace("ed-", "");
+    if (f === "nome") t.nome = e.target.value || "Senza nome";
+    else if (["pf", "pfMax", "ca", "init", "vel"].includes(f)) {
+      const v = parseInt(e.target.value, 10); if (Number.isNaN(v)) return;
+      t[f] = f === "pfMax" ? Math.max(1, v) : v;
+    } else if (f === "taglia") {
+      t.taglia = +e.target.value;
+      t.x = Math.min(t.x, stato.cols - t.taglia); t.y = Math.min(t.y, stato.rows - t.taglia);
+    }
+    if (f === "init" && stato.lotta.attiva) ordinaIniziativa();
+    aggiorna({ tieniEditor: true });
+  });
+  $("editor").addEventListener("click", (e) => {
+    const t = trova(ui.selezionata); if (!t) return;
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.tipo) { t.tipo = b.dataset.tipo; t.colore = (t.tipo === "pg" ? COLORI_PG : COLORI_MOSTRI)[0]; }
+    else if (b.dataset.colore) t.colore = b.dataset.colore;
+    else if (b.dataset.cond) {
+      const c = b.dataset.cond, i = t.condizioni.indexOf(c);
+      if (i >= 0) t.condizioni.splice(i, 1); else { t.condizioni.push(c); if (stato.lotta.attiva) registra(t.nome + ": " + c.toLowerCase() + "."); }
+    } else if (b.id === "ed-dup") {
+      const { id, ...resto } = t;
+      const copia = nuovaPedina(Object.assign(resto, { condizioni: [], iniziativa: null }));
+      copia.nome = nomeUnico(t.nome.replace(/\s+\d+$/, ""));
+      aggiungi(copia); return;
+    } else if (b.id === "ed-del") { rimuovi(t.id); return; }
+    else return;
+    aggiorna();
+  });
+
+  $("combat").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.id === "btn-inizia" || b.id === "btn-reroll") { iniziaLotta(); toast("Iniziativa tirata."); }
+    else if (b.id === "btn-next") passaTurno(1);
+    else if (b.id === "btn-prev") passaTurno(-1);
+    else if (b.id === "btn-fine") fineLotta();
+    else if (b.dataset.sel) { ui.selezionata = +b.dataset.sel; aggiorna(); }
+    else if (b.dataset.danno || b.dataset.cura) {
+      const id = +(b.dataset.danno || b.dataset.cura), q = parseInt($("amt-" + id).value, 10);
+      if (!q || q < 1) { $("amt-" + id).focus(); toast("Scrivi prima quanti punti."); return; }
+      modificaPF(trova(id), b.dataset.danno ? -q : q);
     }
   });
-  window.addEventListener("hashchange", () => {
-    const h = readHash();
-    if (h && h.join() !== seeds.join()) { seeds = h; render(CARDS.map((_, i) => i)); }
+  $("combat").addEventListener("change", (e) => {
+    if (!e.target.dataset.ini) return;
+    const t = trova(+e.target.dataset.ini), v = parseInt(e.target.value, 10);
+    if (t && !Number.isNaN(v)) { t.iniziativa = v; ordinaIniziativa(); aggiorna(); }
+  });
+  $("banner-next").addEventListener("click", () => passaTurno(1));
+
+  // dadi
+  $("dice-grid").innerHTML = [4, 6, 8, 10, 12, 20, 100].map((f) => `<button type="button" class="die-btn" data-d="${f}"><span>d${f}</span></button>`).join("");
+  function mostraTiro(titolo, dett, totale, cls = "") {
+    $("dice-result").innerHTML = `<span class="big ${cls}">${totale}</span><span class="detail"><b>${esc(titolo)}</b> ${esc(dett)}</span>`;
+    registra(titolo + " → " + totale + " " + dett, "dadi"); renderLog(); salva();
+  }
+  $("dice-grid").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-d]"); if (!b) return;
+    const f = +b.dataset.d, n = Math.max(1, Math.min(50, parseInt($("dice-n").value, 10) || 1)), mod = parseInt($("dice-mod").value, 10) || 0;
+    const sm = mod ? (mod > 0 ? " + " : " − ") + Math.abs(mod) : "";
+    if (f === 20 && n === 1) {
+      const r = window.Dadi.d20(mod, ui.adv);
+      const cls = r.naturale === 20 ? "crit" : r.naturale === 1 ? "fumble" : "";
+      const note = r.naturale === 20 ? " · 20 naturale!" : r.naturale === 1 ? " · 1 naturale" : "";
+      mostraTiro("d20" + (ui.adv !== "normale" ? " " + ui.adv : "") + sm, "[" + r.tiri.join(", ") + "]" + note, r.totale, cls);
+    } else {
+      const r = window.Dadi.espressione(n + "d" + f + (mod ? (mod > 0 ? "+" : "") + mod : ""));
+      mostraTiro(n + "d" + f + sm, "[" + r.tiri.join(", ") + "]", r.totale);
+    }
+  });
+  document.querySelector("[data-adv]").parentElement.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-adv]"); if (!b) return;
+    ui.adv = b.dataset.adv;
+    document.querySelectorAll("[data-adv]").forEach((x) => x.setAttribute("aria-pressed", x === b));
+  });
+  $("dice-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const r = window.Dadi.espressione($("dice-expr").value);
+    if (!r) { toast("Formula non valida: usa per esempio 2d6+3."); return; }
+    mostraTiro(r.testo, "[" + r.tiri.join(", ") + "]", r.totale);
   });
 
-  // ---------- avvio ----------
-  seeds = readHash() || CARDS.map(() => newSeed());
-  render();
-  renderSaved();
+  document.addEventListener("keydown", (e) => {
+    if (/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
+    if (e.key === "Escape") { ui.selezionata = null; aggiorna(); }
+    if ((e.key === "Delete" || e.key === "Backspace") && ui.selezionata != null) { e.preventDefault(); rimuovi(ui.selezionata); }
+    if (e.key === "n" && stato.lotta.attiva) passaTurno(1);
+  });
+
+  aggiorna();
 })();

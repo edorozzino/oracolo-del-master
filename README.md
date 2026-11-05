@@ -1,31 +1,51 @@
 # Oracolo del Master
 
-Generatore di scene per Dungeons & Dragons (e qualsiasi gioco fantasy). Premi un pulsante e peschi sei carte:
+Tavolo virtuale per chi fa da Master a Dungeons & Dragons 5e. Genera la scena, mette giocatori e mostri sulla mappa e gestisce il combattimento: tutto in una pagina, senza installare nulla.
 
-| Carta | Dado | Cosa ti dà |
-|---|---|---|
-| ◈ Luogo | d20 | regione, tipo di luogo e un dettaglio strano |
-| ☾ Atmosfera | d12 | meteo, momento della giornata, suono di sottofondo |
-| ☉ PNG | d10 | nome, razza, mestiere, tic e segreto |
-| ⚔ Minaccia | d8 | creatura, movente, difficoltà e numero |
-| ✦ Tesoro | d6 | oggetto, rarità, monete e il suo prezzo nascosto |
-| ❦ Gancio | d4 | lo spunto che mette in moto la scena |
+## Cosa fa
 
-## Come si gioca
+**Scene e ambientazioni**
+- 5 ambientazioni generate a caso: Dungeon, Caverna, Foresta, Taverna, Rovine
+- 4 difficoltà (Facile, Media, Difficile, Mortale) che decidono quanti mostri e se c'è un capo
+- Ogni scena ha un nome, un'atmosfera, un PNG con un segreto e uno spunto d'avventura
+- Pennello per dipingere il terreno a mano (muri, acqua, alberi, porte, fuoco, mobili…) o partire da una mappa vuota
 
-- **Lancia l'Oracolo** (o barra spaziatrice) per una scena nuova.
-- **Blocca** le carte che ti piacciono: restano ferme quando rilanci.
-- **Rilancia** una singola carta per cambiare solo quella.
-- **Copia link**: ogni scena è codificata nell'indirizzo (`#semi-delle-carte`), chi lo apre vede la stessa scena.
-- **Copia testo**: incolla la scena negli appunti di sessione.
-- **Salva scena**: tiene le ultime 20 scene nel browser.
+**Pedine**
+- Giocatori e mostri sulla griglia (1 casella = 5 piedi), trascinabili con mouse o dito
+- Mentre trascini vedi la distanza in piedi; diventa rossa se superi la velocità della pedina
+- Creature Grandi (2×2) ed Enormi (3×3)
+- Scheda modificabile: nome, PF, CA, iniziativa, velocità, colore, condizioni
+- Bestiario con 16 mostri del SRD 5.1 (goblin, ogre, megera verde, giovane drago verde…)
+
+**Combattimento**
+- Tiro d'iniziativa per tutti con un tocco, ordine dei turni e contatore dei round
+- Danno e cura per ogni creatura; i mostri a 0 PF vengono saltati, i giocatori restano a terra
+- Barra del turno sopra la mappa e registro di tutto ciò che succede
+
+**Dadi**
+- d4, d6, d8, d10, d12, d20, d100 con quantità e modificatore
+- Vantaggio e svantaggio per il d20, segnala 20 e 1 naturali
+- Formule libere tipo `2d6+3`
+
+Il tavolo si salva da solo nel browser: chiudi la pagina e riprendi da dove eri.
+
+## Comandi
+
+| Azione | Come |
+|---|---|
+| Muovere una pedina | trascinala |
+| Spostare la mappa | trascina uno spazio vuoto |
+| Zoom | rotella, due dita, o i pulsanti − / + |
+| Dipingere il terreno | scegli un terreno in *Scena → Pennello* e trascina sulla mappa |
+| Turno successivo | pulsante *Prossimo turno* o tasto `N` |
+| Togliere una pedina | selezionala e premi `Canc` |
 
 ## Avvio
 
-Nessuna dipendenza. Apri `index.html` nel browser, oppure:
+Apri `index.html` nel browser, oppure servilo in locale:
 
 ```bash
-npx serve .          # o: python3 -m http.server
+npx serve .          # oppure: python3 -m http.server
 ```
 
 Per un unico file autonomo (CSS e JS incorporati):
@@ -46,25 +66,31 @@ Poi su GitHub: *Settings → Pages → Deploy from branch → main / root*.
 ## Struttura
 
 ```
-index.html          pagina del gioco
-src/data.js         tabelle casuali (luoghi, PNG, mostri, tesori…)
-src/generator.js    generatore con semi deterministici
-src/app.js          interfaccia: lancio, blocco, link, salvataggi
+index.html          pagina e pannelli
+src/mapgen.js       terreni e generatori di mappe
+src/board.js        mappa su canvas: disegno, pan/zoom, trascinamento, pennello
+src/app.js          stato del tavolo, pedine, combattimento, dadi, salvataggio
+src/bestiario.js    mostri, abitanti per ambientazione, difficoltà, dadi
+src/data.js         tabelle per nomi, atmosfere, PNG, spunti
+src/generator.js    estrazione casuale con semi riproducibili
 src/style.css       stile "tavolo da gioco"
-scripts/build.mjs   crea la versione a file singolo
+scripts/build.mjs   versione a file singolo
 ```
 
 ## Aggiungere contenuti
 
-Tutto il materiale sta in `src/data.js`: aggiungi voci agli elenchi e compariranno subito nelle pescate. Per una carta nuova, aggiungi un oggetto all'array `CARDS` in `src/generator.js` con `id`, `label`, `glyph`, `die` e una funzione `make(rng)`.
+- **Un mostro**: aggiungi una voce a `BESTIARIO` in `src/bestiario.js`, e il suo nome in `ABITANTI` se vuoi che compaia nelle scene generate.
+- **Un terreno**: aggiungi un elemento a `TERRENI` in `src/mapgen.js` e, se vuoi un disegno speciale, un `case` in `disegnaCasella` dentro `src/board.js`.
+- **Un'ambientazione**: scrivi una funzione generatrice in `src/mapgen.js`, registrala in `GENERATORI` e `AMBIENTI`, e dai i suoi abitanti in `ABITANTI`.
 
 ## Idee per il futuro
 
-- Tabelle tematiche (horror, piratesco, urbano) selezionabili
-- Modalità dungeon: una mappa a stanze generata con la stessa logica
-- Generazione dei testi con un modello linguistico, partendo dalle carte
-- Esportazione PDF delle scene salvate
+- Nebbia di guerra: il Master scopre la mappa man mano
+- Aree degli incantesimi (cono, sfera, linea) da appoggiare sulla mappa
+- Vista per i giocatori su un secondo schermo
+- Import/export del tavolo in JSON
+- Immagini personalizzate per le pedine
 
 ## Licenza
 
-MIT
+Codice MIT. Le statistiche dei mostri vengono dal System Reference Document 5.1 (CC-BY-4.0, Wizards of the Coast).

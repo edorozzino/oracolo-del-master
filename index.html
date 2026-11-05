@@ -11,32 +11,135 @@
 <link rel="stylesheet" href="src/style.css">
 </head>
 <body>
-<main class="wrap">
+<div class="app">
   <header class="top">
-    <span class="eyebrow">generatore di scene per dungeons &amp; dragons</span>
-    <h1>Oracolo del Master</h1>
-    <p class="lede">Pesca sei carte e hai una scena pronta: dove siete, che aria tira, chi incontrate, cosa vi minaccia, cosa potete trovare e perché dovreste muovervi. Blocca le carte che ti piacciono e rilancia le altre.</p>
+    <div class="brand">
+      <span class="eyebrow">tavolo del master · d&amp;d 5e</span>
+      <h1>Oracolo del Master</h1>
+    </div>
+    <div class="scene-head" id="scene-head"></div>
   </header>
 
-  <div class="controls">
-    <button class="btn-main" id="roll" type="button">Lancia l'Oracolo</button>
-    <button class="btn-ghost" id="save" type="button">Salva scena</button>
-    <button class="btn-ghost" id="copy-text" type="button">Copia testo</button>
-    <button class="btn-ghost" id="copy-link" type="button">Copia link</button>
-    <span class="status" id="status" role="status" aria-live="polite"></span>
+  <div class="layout">
+    <section class="stage" aria-label="Mappa">
+      <div class="toolbar">
+        <div class="seg" role="group" aria-label="Strumento">
+          <button type="button" id="mode-move" class="seg-btn" aria-pressed="true">Muovi</button>
+          <button type="button" id="mode-paint" class="seg-btn" aria-pressed="false">Dipingi</button>
+        </div>
+        <span class="brush-chip" id="brush-chip" hidden></span>
+        <div class="seg" role="group" aria-label="Zoom">
+          <button type="button" id="zoom-out" class="seg-btn" aria-label="Riduci">−</button>
+          <button type="button" id="zoom-fit" class="seg-btn">Adatta</button>
+          <button type="button" id="zoom-in" class="seg-btn" aria-label="Ingrandisci">+</button>
+        </div>
+      </div>
+
+      <div class="turn-banner" id="turn-banner" hidden>
+        <div class="turn-text" id="turn-text"></div>
+        <button type="button" class="btn-main small" id="banner-next">Prossimo turno</button>
+      </div>
+
+      <div class="board-wrap">
+        <canvas id="board" aria-label="Mappa di gioco: trascina le pedine per muoverle"></canvas>
+        <div class="hud" id="hud" hidden></div>
+        <div class="toast" id="toast" role="status" aria-live="polite"></div>
+      </div>
+      <p class="hint">Trascina una pedina per muoverla (la distanza appare in piedi). Trascina il vuoto per spostare la mappa, rotella o due dita per lo zoom.</p>
+    </section>
+
+    <aside class="panel">
+      <nav class="tabs" role="tablist" aria-label="Sezioni">
+        <button type="button" role="tab" id="t-scena" aria-controls="p-scena" aria-selected="true">Scena</button>
+        <button type="button" role="tab" id="t-pedine" aria-controls="p-pedine" aria-selected="false">Pedine</button>
+        <button type="button" role="tab" id="t-lotta" aria-controls="p-lotta" aria-selected="false">Combattimento</button>
+        <button type="button" role="tab" id="t-dadi" aria-controls="p-dadi" aria-selected="false">Dadi</button>
+      </nav>
+
+      <!-- SCENA -->
+      <div class="tabpanel" role="tabpanel" id="p-scena" aria-labelledby="t-scena">
+        <div class="block">
+          <h2>Nuova scena</h2>
+          <div class="field-row">
+            <label class="field"><span>Ambientazione</span>
+              <select id="sel-ambiente"></select></label>
+            <label class="field"><span>Difficoltà</span>
+              <select id="sel-diff"></select></label>
+          </div>
+          <button type="button" class="btn-main" id="btn-genera">Genera scena</button>
+          <p class="note">Crea mappa, mostri adatti al luogo e uno spunto. I giocatori restano e vengono messi all'ingresso.</p>
+        </div>
+        <div class="block scene-card" id="scene-card"></div>
+        <div class="block">
+          <h2>Pennello terreno</h2>
+          <div class="palette" id="palette"></div>
+          <div class="row-btns">
+            <button type="button" class="btn-ghost" id="btn-vuota">Mappa vuota</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PEDINE -->
+      <div class="tabpanel" role="tabpanel" id="p-pedine" aria-labelledby="t-pedine" hidden>
+        <div class="block">
+          <h2>Aggiungi</h2>
+          <div class="row-btns">
+            <button type="button" class="btn-ghost" id="btn-add-pg">+ Giocatore</button>
+          </div>
+          <div class="field-row">
+            <label class="field grow"><span>Mostro dal bestiario</span>
+              <select id="sel-mostro"></select></label>
+            <button type="button" class="btn-ghost self-end" id="btn-add-mostro">+ Mostro</button>
+          </div>
+        </div>
+        <div class="block" id="editor"></div>
+        <div class="block">
+          <h2>Sul tavolo</h2>
+          <ul class="token-list" id="token-list"></ul>
+        </div>
+      </div>
+
+      <!-- COMBATTIMENTO -->
+      <div class="tabpanel" role="tabpanel" id="p-lotta" aria-labelledby="t-lotta" hidden>
+        <div class="block" id="combat"></div>
+        <div class="block">
+          <h2>Registro</h2>
+          <ol class="log" id="log-combat"></ol>
+        </div>
+      </div>
+
+      <!-- DADI -->
+      <div class="tabpanel" role="tabpanel" id="p-dadi" aria-labelledby="t-dadi" hidden>
+        <div class="block">
+          <div class="dice-result" id="dice-result"><span class="big">d20</span><span class="detail">Tocca un dado per tirarlo.</span></div>
+          <div class="dice-grid" id="dice-grid"></div>
+          <div class="field-row">
+            <label class="field"><span>Quanti</span><input id="dice-n" type="number" min="1" max="50" value="1" inputmode="numeric"></label>
+            <label class="field"><span>Modificatore</span><input id="dice-mod" type="number" value="0" inputmode="numeric"></label>
+          </div>
+          <div class="seg" role="group" aria-label="Modalità d20">
+            <button type="button" class="seg-btn" data-adv="normale" aria-pressed="true">Normale</button>
+            <button type="button" class="seg-btn" data-adv="vantaggio" aria-pressed="false">Vantaggio</button>
+            <button type="button" class="seg-btn" data-adv="svantaggio" aria-pressed="false">Svantaggio</button>
+          </div>
+          <form class="field-row" id="dice-form">
+            <label class="field grow"><span>Formula</span><input id="dice-expr" type="text" placeholder="es. 2d6+3" autocomplete="off"></label>
+            <button type="submit" class="btn-ghost self-end">Tira</button>
+          </form>
+        </div>
+        <div class="block">
+          <h2>Registro</h2>
+          <ol class="log" id="log-dadi"></ol>
+        </div>
+      </div>
+    </aside>
   </div>
-
-  <section class="table" id="table" aria-label="Carte della scena"></section>
-
-  <section class="saved" aria-labelledby="saved-title">
-    <h3 id="saved-title">Scene salvate</h3>
-    <ul class="saved-list" id="saved-list"></ul>
-  </section>
-
-  <footer>Barra spaziatrice: nuova scena · Ogni scena ha un link che la ricrea identica.</footer>
-</main>
+</div>
 <script src="src/data.js"></script>
 <script src="src/generator.js"></script>
+<script src="src/bestiario.js"></script>
+<script src="src/mapgen.js"></script>
+<script src="src/board.js"></script>
 <script src="src/app.js"></script>
 </body>
 </html>
