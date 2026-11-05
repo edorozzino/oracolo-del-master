@@ -168,19 +168,38 @@
       (t.pf <= 0 && prima > 0 ? (t.tipo === "pg" ? " È a terra!" : " Sconfitto.") : ""));
     aggiorna();
   }
-  function rimuovi(id) {
-    const t = trova(id); if (!t) return;
+  // Toglie una o più pedine; "Annulla" le rimette dov'erano, anche nell'iniziativa.
+  let annullabile = null;
+  function rimuovi(ids) {
+    ids = [].concat(ids).filter((id) => trova(id));
+    if (!ids.length) return;
+    const copia = { pedine: stato.pedine.slice(), lotta: JSON.parse(JSON.stringify(stato.lotta)) };
+    const nomi = ids.map((id) => trova(id).nome);
     const corrente = turnoCorrente();
-    stato.pedine = stato.pedine.filter((p) => p.id !== id);
+    stato.pedine = stato.pedine.filter((p) => !ids.includes(p.id));
     if (stato.lotta.attiva) {
-      stato.lotta.ordine = stato.lotta.ordine.filter((x) => x !== id);
+      stato.lotta.ordine = stato.lotta.ordine.filter((x) => !ids.includes(x));
       const i = stato.lotta.ordine.indexOf(corrente);
       stato.lotta.indice = i >= 0 ? i : Math.min(stato.lotta.indice, Math.max(0, stato.lotta.ordine.length - 1));
       if (!stato.lotta.ordine.length) stato.lotta.attiva = false;
     }
-    if (ui.selezionata === id) ui.selezionata = null;
-    registra(t.nome + " lascia il tavolo.", "scena");
+    if (ids.includes(ui.selezionata)) ui.selezionata = null;
+    const testo = nomi.length === 1 ? nomi[0] + " tolto dal tavolo." : nomi.length + " pedine tolte dal tavolo.";
+    registra(testo, "scena");
+    annullabile = copia;
+    avviso(testo, "Annulla", () => {
+      if (!annullabile) return;
+      stato.pedine = annullabile.pedine; stato.lotta = annullabile.lotta; annullabile = null;
+      registra("Rimozione annullata.", "scena"); aggiorna();
+    });
     aggiorna();
+  }
+  function avviso(testo, azione, fn) {
+    const el = $("snack");
+    el.innerHTML = `<span>${esc(testo)}</span>` + (azione ? `<button type="button" id="snack-act">${esc(azione)}</button>` : "");
+    el.hidden = false;
+    if (azione) $("snack-act").onclick = () => { el.hidden = true; fn(); };
+    clearTimeout(avviso.t); avviso.t = setTimeout(() => { el.hidden = true; annullabile = null; }, 7000);
   }
   function aggiungi(t) {
     const occ = occupate();
@@ -234,6 +253,7 @@
         <button type="button" data-hud="-5">−5</button><button type="button" data-hud="-1">−1</button>
         <button type="button" data-hud="1">+1</button><button type="button" data-hud="5">+5</button>
         <button type="button" data-hud="scheda" class="wide">Scheda</button>
+        <button type="button" data-hud="rimuovi" class="wide out">Togli</button>
       </div>`;
   }
 
@@ -251,11 +271,11 @@
   function renderLista() {
     const pg = stato.pedine.filter((t) => t.tipo === "pg"), mo = stato.pedine.filter((t) => t.tipo !== "pg");
     const riga = (t) => `
-      <li><button type="button" class="token-row${t.id === ui.selezionata ? " sel" : ""}${t.pf <= 0 ? " down" : ""}" data-sel="${t.id}">
+      <li class="token-li"><button type="button" class="token-row${t.id === ui.selezionata ? " sel" : ""}${t.pf <= 0 ? " down" : ""}" data-sel="${t.id}">
         <canvas class="ritratto" data-rit="${t.id}"></canvas>
         <span class="tname">${esc(t.nome)}<small>${esc(descrivi(t))}</small></span>
         ${barraPF(t)}<span class="num">${t.pf}/${t.pfMax}</span><span class="num muted">CA ${t.ca}</span>
-      </button></li>`;
+      </button><button type="button" class="token-del" data-del="${t.id}" aria-label="Togli ${esc(t.nome)} dal tavolo">×</button></li>`;
     $("token-list").innerHTML =
       (pg.length ? `<li class="group">Giocatori</li>${pg.map(riga).join("")}` : "") +
       (mo.length ? `<li class="group">Mostri e PNG</li>${mo.map(riga).join("")}` : "") ||
@@ -419,6 +439,45 @@
     $("view-top").setAttribute("aria-pressed", v === "pianta");
     tavolo.adatta();
   }
+  // ---------- schermo intero ----------
+  // Dove il browser lo permette usa il vero schermo intero; su iPhone la mappa
+  // occupa comunque tutta la pagina, e dalla Home si apre senza barre del browser.
+  const fsNativo = () => document.fullscreenElement || document.webkitFullscreenElement;
+  function modalitaGioco(on) {
+    document.body.classList.toggle("gioco", on);
+    document.body.classList.remove("pannello");
+    $("btn-fs").setAttribute("aria-pressed", on);
+    $("btn-fs").textContent = on ? "Esci" : "Schermo intero";
+    $("btn-pannello").setAttribute("aria-pressed", "false");
+    requestAnimationFrame(() => requestAnimationFrame(() => tavolo.adatta()));
+  }
+  $("btn-fs").addEventListener("click", async () => {
+    const on = !document.body.classList.contains("gioco");
+    if (on) {
+      const el = document.documentElement, req = el.requestFullscreen || el.webkitRequestFullscreen;
+      let ok = false;
+      if (req) { try { await req.call(el); ok = true; } catch (e) { ok = false; } }
+      modalitaGioco(true);
+      const standalone = window.navigator.standalone || matchMedia("(display-mode: standalone), (display-mode: fullscreen)").matches;
+      if (!ok && !standalone && /iPhone|iPod/.test(navigator.userAgent)) avviso("Per nascondere anche le barre di Safari: Condividi → Aggiungi alla schermata Home.");
+    } else {
+      if (fsNativo()) { try { await (document.exitFullscreen || document.webkitExitFullscreen).call(document); } catch (e) { /* già uscito */ } }
+      modalitaGioco(false);
+    }
+  });
+  const suFs = () => { if (!fsNativo() && document.body.classList.contains("gioco")) modalitaGioco(false); };
+  document.addEventListener("fullscreenchange", suFs);
+  document.addEventListener("webkitfullscreenchange", suFs);
+  function pannello(on) {
+    document.body.classList.toggle("pannello", on);
+    $("btn-pannello").setAttribute("aria-pressed", on);
+  }
+  $("btn-pannello").addEventListener("click", () => pannello(!document.body.classList.contains("pannello")));
+  $("panel-close").addEventListener("click", () => pannello(false));
+
+  // niente selezione del testo o menu "Copia" tenendo premuto sulla mappa
+  for (const ev of ["contextmenu", "selectstart"]) $("board").addEventListener(ev, (e) => e.preventDefault());
+
   $("view-iso").addEventListener("click", () => impostaVista("iso"));
   $("view-top").addEventListener("click", () => impostaVista("pianta"));
   $("view-iso").setAttribute("aria-pressed", ui.vista === "iso");
@@ -442,6 +501,7 @@
     const b = e.target.closest("[data-hud]"); if (!b) return;
     const v = b.dataset.hud, t = trova(ui.selezionata);
     if (v === "chiudi") { ui.selezionata = null; aggiorna(); }
+    else if (v === "rimuovi") rimuovi(t.id);
     else if (v === "scheda") { ui.tab = "pedine"; renderTabs(); $("p-pedine").scrollIntoView({ behavior: "smooth", block: "start" }); }
     else modificaPF(t, +v);
   });
@@ -450,9 +510,12 @@
     const n = stato.pedine.filter((p) => p.tipo === "pg").length;
     aggiungi(creaPG(n)); toast("Giocatore aggiunto: trascinalo dove vuoi.");
   });
+  $("btn-via-mostri").addEventListener("click", () => rimuovi(stato.pedine.filter((p) => p.tipo !== "pg").map((p) => p.id)));
+  $("btn-via-morti").addEventListener("click", () => rimuovi(stato.pedine.filter((p) => p.tipo !== "pg" && p.pf <= 0).map((p) => p.id)));
   $("btn-add-mostro").addEventListener("click", () => { aggiungi(creaMostro($("sel-mostro").value)); toast("Mostro aggiunto."); });
 
   $("token-list").addEventListener("click", (e) => {
+    const d = e.target.closest("[data-del]"); if (d) { rimuovi(+d.dataset.del); return; }
     const b = e.target.closest("[data-sel]"); if (!b) return;
     ui.selezionata = +b.dataset.sel; aggiorna();
   });

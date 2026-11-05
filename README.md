@@ -39,6 +39,10 @@ Tavolo virtuale per chi fa da Master a Dungeons & Dragons 5e. Genera la scena, m
 - Vantaggio e svantaggio per il d20, segnala 20 e 1 naturali
 - Formule libere tipo `2d6+3`
 
+**Schermo intero**
+- Il pulsante *Schermo intero* lascia solo la mappa, con il pannello che si apre di lato
+- Su iPhone: in Safari *Condividi → Aggiungi alla schermata Home* e il gioco si apre come un'app, senza barre del browser
+
 Il tavolo si salva da solo nel browser: chiudi la pagina e riprendi da dove eri.
 
 ## Comandi
@@ -50,7 +54,8 @@ Il tavolo si salva da solo nel browser: chiudi la pagina e riprendi da dove eri.
 | Zoom | rotella, due dita, o i pulsanti − / + |
 | Dipingere il terreno | scegli un terreno in *Scena → Pennello* e trascina sulla mappa |
 | Turno successivo | pulsante *Prossimo turno* o tasto `N` |
-| Togliere una pedina | selezionala e premi `Canc` |
+| Togliere una pedina | × accanto al nome in *Pedine*, *Togli* nella scheda rapida, o `Canc`; poi *Annulla* se ti sei sbagliato |
+| Togliere più mostri | *Pedine → Togli i mostri sconfitti* o *Togli tutti i mostri* |
 
 ## Avvio
 

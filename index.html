@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Oracolo del Master</title>
 <meta name="claude:viewport-fit-sides" content="cover">
+<meta name="theme-color" content="#10211d">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Oracolo">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,400;0,700;1,400&family=Alegreya+Sans+SC:wght@500;700&family=IM+Fell+English+SC&display=swap">
@@ -32,11 +39,15 @@
           <button type="button" id="view-top" class="seg-btn" aria-pressed="false">Pianta</button>
         </div>
         <span class="brush-chip" id="brush-chip" hidden></span>
+        <div class="seg only-game" role="group" aria-label="Pannello">
+          <button type="button" id="btn-pannello" class="seg-btn" aria-pressed="false">Pannello</button>
+        </div>
         <div class="seg" role="group" aria-label="Zoom">
           <button type="button" id="zoom-out" class="seg-btn" aria-label="Riduci">−</button>
           <button type="button" id="zoom-fit" class="seg-btn">Adatta</button>
           <button type="button" id="zoom-in" class="seg-btn" aria-label="Ingrandisci">+</button>
         </div>
+        <button type="button" id="btn-fs" class="seg-btn fs-btn" aria-pressed="false">Schermo intero</button>
       </div>
 
       <div class="turn-banner" id="turn-banner" hidden>
@@ -48,11 +59,13 @@
         <canvas id="board" aria-label="Mappa di gioco: trascina le pedine per muoverle"></canvas>
         <div class="hud" id="hud" hidden></div>
         <div class="toast" id="toast" role="status" aria-live="polite"></div>
+        <div class="snack" id="snack" role="status" aria-live="polite" hidden></div>
       </div>
       <p class="hint">Trascina una pedina per muoverla (la distanza appare in piedi). Trascina il terreno per spostare la mappa, rotella o due dita per lo zoom. Chi è dietro un muro resta visibile in trasparenza.</p>
     </section>
 
-    <aside class="panel">
+    <aside class="panel" id="panel">
+      <button type="button" class="panel-close only-game" id="panel-close">Chiudi pannello</button>
       <nav class="tabs" role="tablist" aria-label="Sezioni">
         <button type="button" role="tab" id="t-scena" aria-controls="p-scena" aria-selected="true">Scena</button>
         <button type="button" role="tab" id="t-pedine" aria-controls="p-pedine" aria-selected="false">Pedine</button>
@@ -94,6 +107,10 @@
             <label class="field grow"><span>Mostro dal bestiario</span>
               <select id="sel-mostro"></select></label>
             <button type="button" class="btn-ghost self-end" id="btn-add-mostro">+ Mostro</button>
+          </div>
+          <div class="row-btns">
+            <button type="button" class="btn-ghost danger" id="btn-via-morti">Togli i mostri sconfitti</button>
+            <button type="button" class="btn-ghost danger" id="btn-via-mostri">Togli tutti i mostri</button>
           </div>
         </div>
         <div class="block" id="editor"></div>

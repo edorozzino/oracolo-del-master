@@ -1,0 +1,17 @@
+{
+  "name": "Oracolo del Master",
+  "short_name": "Oracolo",
+  "description": "Tavolo virtuale per D&D: mappe, pedine, combattimento e dadi.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "any",
+  "background_color": "#10211d",
+  "theme_color": "#10211d",
+  "lang": "it",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
