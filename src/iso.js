@@ -38,6 +38,9 @@
   // ---------------- terreno (cache) ----------------
   function costruisci(st) {
     const { cols, rows } = st;
+    // con la mappa ruotata, i dettagli casuali (fili d'erba, tipo di albero) seguono la casella vera
+    const mondo = st.mondo || ((x, y) => [x, y]);
+    const rc = (x, y, k) => { const [a, b] = mondo(x, y); return rngCella(a, b, k); };
     const g = (x, y) => (x < 0 || y < 0 || x >= cols || y >= rows ? -1 : st.celle[y * cols + x]);
     const SL = 0.6 * CS;
     const cv = document.createElement("canvas");
@@ -49,7 +52,7 @@
     // 1. rombi con texture
     for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
       const t = g(x, y); if (t === ID.vuoto) continue;
-      const k = suolo(t), pal = PAL[k] || ["#888"], r = rngCella(x, y);
+      const k = suolo(t), pal = PAL[k] || ["#888"], r = rc(x, y);
       const [X, Y] = P(x, y);
       c.save(); rombo(c, X, Y, CS); c.fillStyle = pal[Math.floor(r() * pal.length)]; c.fill(); c.clip();
       if (k === ID.erba) {
@@ -88,7 +91,7 @@
     const dirs = [[0, -1, .75, .25], [1, 0, .75, .75], [0, 1, .25, .75], [-1, 0, .25, .25]]; // vicino, punto medio del lato (frazioni)
     for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
       const t = g(x, y); if (!naturale(t)) continue;
-      const r = rngCella(x, y, 2), [X, Y] = P(x, y);
+      const r = rc(x, y, 2), [X, Y] = P(x, y);
       for (const [dx, dy] of dirs) {
         const n = g(x + dx, y + dy); if (!naturale(n) || n === t) continue;
         const mx = X + dx * CS * .5 - dy * CS * .5, my = Y + CS / 2 + dx * CS * .25 + dy * CS * .25;
@@ -134,7 +137,7 @@
     // oggetti in rilievo, ordinati per profondità
     const oggetti = [];
     for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
-      const t = g(x, y), r = rngCella(x, y, 7);
+      const t = g(x, y), r = rc(x, y, 7);
       let k = null;
       if (t === ID.muro) k = "muro";
       else if (t === ID.roccia) k = "roccia";
@@ -145,7 +148,7 @@
       else if (t === ID.lava) k = "fuoco";
       else if (t === ID.erba && r() < .07) k = "cespuglio";
       else if (t === ID.sabbia && r() < .05) k = "sasso";
-      if (k) oggetti.push({ x, y, k, d: x + y });
+      if (k) { const [wx, wy] = mondo(x, y); oggetti.push({ x, y, wx, wy, k, d: x + y }); }
     }
     oggetti.sort((a, b) => a.d - b.d || a.x - b.x);
     return { canvas: cv, oggetti, g };
@@ -166,7 +169,7 @@
 
   function disegnaOggetto(ctx, o, view, g) {
     const s = view.s, X = view.ox + (o.x - o.y) * s, Y = view.oy + (o.x + o.y) * s / 2;
-    const cx = X, cy = Y + s / 2, r = rngCella(o.x, o.y, 11);
+    const cx = X, cy = Y + s / 2, r = rngCella(o.wx ?? o.x, o.wy ?? o.y, 11);
     switch (o.k) {
       case "muro": {
         const H = s * 1.15, col = "#a39a88";

@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,400;0,700;1,400&family=Alegreya+Sans+SC:wght@500;700&family=IM+Fell+English+SC&display=swap">
-<link rel="stylesheet" href="src/style.css?v=202611052033">
+<link rel="stylesheet" href="src/style.css?v=202611052041">
 </head>
 <body>
 <div class="app">
@@ -44,6 +44,11 @@
         <div class="seg" role="group" aria-label="Vista">
           <button type="button" id="view-iso" class="seg-btn" aria-pressed="true">3D</button>
           <button type="button" id="view-top" class="seg-btn" aria-pressed="false">Pianta</button>
+        </div>
+        <div class="seg" role="group" aria-label="Ruota la mappa" id="rotazione">
+          <button type="button" class="seg-btn" id="rot-sx" title="Ruota a sinistra (Q)" aria-label="Ruota a sinistra">⟲</button>
+          <span class="rot-bussola" id="rot-bussola" aria-hidden="true"><span>N</span></span>
+          <button type="button" class="seg-btn" id="rot-dx" title="Ruota a destra (E)" aria-label="Ruota a destra">⟳</button>
         </div>
         <div class="seg only-game" role="group" aria-label="Pannello">
           <button type="button" id="btn-pannello" class="seg-btn" aria-pressed="false">Pannello</button>
@@ -167,13 +172,13 @@
     </aside>
   </div>
 </div>
-<script src="src/data.js?v=202611052033"></script>
-<script src="src/generator.js?v=202611052033"></script>
-<script src="src/bestiario.js?v=202611052033"></script>
-<script src="src/mapgen.js?v=202611052033"></script>
-<script src="src/figure.js?v=202611052033"></script>
-<script src="src/iso.js?v=202611052033"></script>
-<script src="src/board.js?v=202611052033"></script>
-<script src="src/app.js?v=202611052033"></script>
+<script src="src/data.js?v=202611052041"></script>
+<script src="src/generator.js?v=202611052041"></script>
+<script src="src/bestiario.js?v=202611052041"></script>
+<script src="src/mapgen.js?v=202611052041"></script>
+<script src="src/figure.js?v=202611052041"></script>
+<script src="src/iso.js?v=202611052041"></script>
+<script src="src/board.js?v=202611052041"></script>
+<script src="src/app.js?v=202611052041"></script>
 </body>
 </html>

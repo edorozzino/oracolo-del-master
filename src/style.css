@@ -357,3 +357,16 @@ body.gioco .btn-main.small { font-size: 14px; padding: 4px 10px; white-space: no
 .seg-btn[data-storia] { font-size: 18px; line-height: 1; min-width: 42px; }
 .panel-storia { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
 .panel-storia .btn-ghost { min-height: 42px; }
+
+/* rotazione */
+.seg-btn#rot-sx, .seg-btn#rot-dx { font-size: 19px; line-height: 1; min-width: 42px; }
+.rot-bussola {
+  width: 34px; display: grid; place-items: center; border-left: 1px solid var(--line); border-right: 1px solid var(--line);
+}
+.rot-bussola span {
+  width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--brass-dim, #8a6f33);
+  display: grid; place-items: center; font-family: var(--f-label); font-size: 11px; font-weight: 700; color: var(--brass-hi);
+  transform: rotate(var(--rot, -45deg)); transition: transform .3s ease;
+  background: conic-gradient(from -20deg, var(--blood) 0 40deg, transparent 40deg);
+}
+@media (prefers-reduced-motion: reduce) { .rot-bussola span { transition: none; } }

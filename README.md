@@ -54,6 +54,7 @@ Il tavolo si salva da solo nel browser: chiudi la pagina e riprendi da dove eri.
 | Muovere una pedina | trascinala |
 | Spostare la mappa | trascina uno spazio vuoto |
 | Zoom | rotella, due dita, o i pulsanti − / + |
+| Ruotare la mappa 3D | ⟲ ⟳ nella barra, tasti Q / E, o ruota due dita sul tablet; la bussola mostra il nord |
 | Dipingere il terreno | scegli un terreno in *Scena → Pennello* e trascina sulla mappa |
 | Disegnare una stanza | *Stanza*, scegli il pavimento e trascina da un angolo all'altro: muri, pavimento e porta |
 | Aggiungere eroi e mostri | *Aggiungi*, scegli dalla galleria (o razza e classe per un eroe) e tocca la mappa |

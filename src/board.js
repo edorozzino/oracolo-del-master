@@ -90,13 +90,15 @@
     function adatta() {
       const st = api.stato();
       if (api.vista() === "iso") {
-        Object.assign(view, window.Iso.adatta(w, h, st));
+        const { W, H } = dimVista(st);
+        Object.assign(view, window.Iso.adatta(w, h, { cols: W, rows: H }));
         if (w < 640 && view.s < 20) { // telefono: figure leggibili, centrate sui giocatori
           view.s = 20;
           const pg = st.pedine.filter((p) => p.tipo === "pg");
           const cx = pg.length ? pg.reduce((a, p) => a + p.x, 0) / pg.length + .5 : st.cols / 2;
           const cy = pg.length ? pg.reduce((a, p) => a + p.y, 0) / pg.length + .5 : st.rows / 2;
-          window.Iso.centra(view, w, h, (cx + st.cols / 2) / 2, (cy + st.rows / 2) / 2);
+          const [vx, vy] = puntoAVista((cx + st.cols / 2) / 2, (cy + st.rows / 2) / 2, st);
+          window.Iso.centra(view, w, h, vx, vy);
         }
         adattata = true; disegna(); return;
       }
@@ -177,16 +179,79 @@
     }
 
     let isoCache = null, isoSporca = true, raf = 0;
+
+    // ---------- rotazione della vista 3D (a passi di 90°) ----------
+    // "mondo" = caselle vere della mappa; "vista" = caselle come appaiono ruotate.
+    let rot = 0, celleRuotate = null;
+    function dimVista(st) { return rot % 2 ? { W: st.rows, H: st.cols } : { W: st.cols, H: st.rows }; }
+    function aVista(x, y, n, st) { // angolo in alto a sinistra di un blocco n×n
+      n = n || 1;
+      if (rot === 1) return { x: st.rows - y - n, y: x };
+      if (rot === 2) return { x: st.cols - x - n, y: st.rows - y - n };
+      if (rot === 3) return { x: y, y: st.cols - x - n };
+      return { x, y };
+    }
+    function aMondo(vx, vy, st) { // casella vista -> casella vera
+      if (rot === 1) return { x: vy, y: st.rows - 1 - vx };
+      if (rot === 2) return { x: st.cols - 1 - vx, y: st.rows - 1 - vy };
+      if (rot === 3) return { x: st.cols - 1 - vy, y: vx };
+      return { x: vx, y: vy };
+    }
+    // stesso calcolo su coordinate continue (per tenere centrata la vista)
+    function puntoAVista(x, y, st) {
+      if (rot === 1) return [st.rows - y, x];
+      if (rot === 2) return [st.cols - x, st.rows - y];
+      if (rot === 3) return [y, st.cols - x];
+      return [x, y];
+    }
+    function puntoAMondo(vx, vy, st) {
+      if (rot === 1) return [vy, st.rows - vx];
+      if (rot === 2) return [st.cols - vx, st.rows - vy];
+      if (rot === 3) return [st.cols - vy, vx];
+      return [vx, vy];
+    }
+    function statoVista(st) {
+      const { W, H } = dimVista(st);
+      if (isoSporca || !celleRuotate) {
+        celleRuotate = new Array(W * H);
+        for (let vy = 0; vy < H; vy++) for (let vx = 0; vx < W; vx++) {
+          const m = aMondo(vx, vy, st); celleRuotate[vy * W + vx] = st.celle[m.y * st.cols + m.x];
+        }
+      }
+      const pedine = st.pedine.map((t) => Object.assign({}, t, aVista(t.x, t.y, t.taglia, st)));
+      return { cols: W, rows: H, celle: celleRuotate, pedine, mondo: (vx, vy) => { const m = aMondo(vx, vy, st); return [m.x, m.y]; } };
+    }
+    function ruota(dir) {
+      const st = api.stato();
+      if (api.vista() !== "iso") return;
+      // punto della mappa al centro dello schermo, da tenere al centro dopo la rotazione
+      const a = (w / 2 - view.ox) / view.s, b = (h / 2 - view.oy) / (view.s / 2);
+      const [mx, my] = puntoAMondo((a + b) / 2, (b - a) / 2, st);
+      rot = (rot + dir + 4) % 4; isoSporca = true;
+      const [nx, ny] = puntoAVista(mx, my, st);
+      window.Iso.centra(view, w, h, nx, ny);
+      disegna();
+      api.ruotata && api.ruotata(rot);
+    }
     function disegna() { if (api.vista() === "iso") disegnaIso(); else disegnaPianta(); }
     function richiedi() { if (!raf) raf = requestAnimationFrame(() => { raf = 0; disegna(); }); }
     function disegnaIso() {
       const st = api.stato();
-      if (isoSporca || !isoCache) { isoCache = window.Iso.costruisci(st); isoSporca = false; }
+      const sv = statoVista(st);
+      if (isoSporca || !isoCache) { isoCache = window.Iso.costruisci(sv); isoSporca = false; }
       ctx.clearRect(0, 0, w, h);
-      const drag = azione && azione.tipo === "pedina"
-        ? { id: azione.id, da: azione.da, a: azione.a, piedi: Math.max(Math.abs(azione.a.x - azione.da.x), Math.abs(azione.a.y - azione.da.y)) * 5 }
-        : null;
-      window.Iso.disegna(ctx, w, h, st, view, isoCache, { sel: api.selezionata(), turno: api.turnoCorrente(), drag, stanza: celleStanza() });
+      let drag = null;
+      if (azione && azione.tipo === "pedina") {
+        const t = st.pedine.find((q) => q.id === azione.id), n = t ? t.taglia : 1;
+        drag = { id: azione.id, da: aVista(azione.da.x, azione.da.y, n, st), a: aVista(azione.a.x, azione.a.y, n, st),
+          piedi: Math.max(Math.abs(azione.a.x - azione.da.x), Math.abs(azione.a.y - azione.da.y)) * 5 };
+      }
+      let stanza = celleStanza();
+      if (stanza) {
+        const celle = stanza.celle.map(([x, y, bordo]) => { const v = aVista(x, y, 1, st); return [v.x, v.y, bordo]; });
+        stanza = { celle, w: stanza.w, h: stanza.h, x1: Math.max(...celle.map((c) => c[0])), y1: Math.max(...celle.map((c) => c[1])) };
+      }
+      window.Iso.disegna(ctx, w, h, sv, view, isoCache, { sel: api.selezionata(), turno: api.turnoCorrente(), drag, stanza });
     }
     function disegnaPianta() {
       const st = api.stato(), s = view.s;
@@ -242,12 +307,12 @@
     function aCasella(e) {
       const r = canvas.getBoundingClientRect();
       const px = e.clientX - r.left, py = e.clientY - r.top;
-      if (api.vista() === "iso") return Object.assign({ px, py }, window.Iso.casella(px, py, view));
+      if (api.vista() === "iso") { const v = window.Iso.casella(px, py, view); return Object.assign({ px, py }, aMondo(v.x, v.y, api.stato())); }
       return { px, py, x: Math.floor((px - view.ox) / view.s), y: Math.floor((py - view.oy) / view.s) };
     }
     function pedinaIn(p) {
       const st = api.stato();
-      if (api.vista() === "iso") return window.Iso.pedinaIn(p.px, p.py, st, view);
+      if (api.vista() === "iso") { const v = window.Iso.pedinaIn(p.px, p.py, statoVista(st), view); return v ? st.pedine.find((t) => t.id === v.id) : null; }
       for (let i = st.pedine.length - 1; i >= 0; i--) {
         const t = st.pedine[i];
         const cx = view.ox + (t.x + t.taglia / 2) * view.s, cy = view.oy + (t.y + t.taglia / 2) * view.s;
@@ -280,7 +345,7 @@
       puntatori.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (puntatori.size === 2) {
         const [a, b] = [...puntatori.values()];
-        azione = { tipo: "pinch", d0: Math.hypot(a.x - b.x, a.y - b.y), s0: view.s, ox0: view.ox, oy0: view.oy,
+        azione = { tipo: "pinch", d0: Math.hypot(a.x - b.x, a.y - b.y), s0: view.s, ox0: view.ox, oy0: view.oy, ang0: Math.atan2(b.y - a.y, b.x - a.x),
           mx: (a.x + b.x) / 2 - canvas.getBoundingClientRect().left, my: (a.y + b.y) / 2 - canvas.getBoundingClientRect().top };
         disegna(); return;
       }
@@ -305,6 +370,14 @@
       if (azione.tipo === "pinch" && puntatori.size >= 2) {
         const [a, b] = [...puntatori.values()];
         const d = Math.hypot(a.x - b.x, a.y - b.y);
+        // ruotare due dita di circa 45° gira la mappa di un quarto
+        const ang = Math.atan2(b.y - a.y, b.x - a.x);
+        let da = ang - azione.ang0; if (da > Math.PI) da -= 2 * Math.PI; if (da < -Math.PI) da += 2 * Math.PI;
+        if (api.vista() === "iso" && Math.abs(da) > 0.75) {
+          ruota(da > 0 ? 1 : -1);
+          Object.assign(azione, { ang0: ang, d0: d, s0: view.s, ox0: view.ox, oy0: view.oy });
+          return;
+        }
         const s2 = Math.max(8, Math.min(120, azione.s0 * d / azione.d0)), k = s2 / azione.s0;
         view.s = s2; view.ox = azione.mx - (azione.mx - azione.ox0) * k; view.oy = azione.my - (azione.my - azione.oy0) * k;
         richiedi(); return;
@@ -371,7 +444,8 @@
     return {
       disegna,
       terrenoCambiato() { cacheSporca = true; isoSporca = true; disegna(); },
-      adatta, zoom
+      adatta, zoom, ruota,
+      rotazione: () => rot
     };
   }
 

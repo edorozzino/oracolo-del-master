@@ -588,7 +588,8 @@
       if (stato.lotta.attiva) registra(t.nome + " si muove di " + piedi + " ft.");
       aggiorna();
     },
-    dipinto() { salva(); }
+    dipinto() { salva(); },
+    ruotata(r) { bussola(r); }
   });
 
   // ---------------- eventi ----------------
@@ -608,6 +609,7 @@
     try { localStorage.setItem("oracolo-vista", v); } catch (e) { /* ignorato */ }
     $("view-iso").setAttribute("aria-pressed", v === "iso");
     $("view-top").setAttribute("aria-pressed", v === "pianta");
+    $("rotazione").hidden = v !== "iso";
     tavolo.adatta();
   }
   // ---------- schermo intero ----------
@@ -649,6 +651,12 @@
   // niente selezione del testo o menu "Copia" tenendo premuto sulla mappa
   for (const ev of ["contextmenu", "selectstart"]) $("board").addEventListener(ev, (e) => e.preventDefault());
 
+  // la bussola indica da che lato si guarda la mappa
+  function bussola(r) { $("rot-bussola").style.setProperty("--rot", (-90 * r - 45) + "deg"); }
+  $("rot-sx").addEventListener("click", () => tavolo.ruota(-1));
+  $("rot-dx").addEventListener("click", () => tavolo.ruota(1));
+  $("rotazione").hidden = ui.vista !== "iso";
+  bussola(0);
   $("view-iso").addEventListener("click", () => impostaVista("iso"));
   $("view-top").addEventListener("click", () => impostaVista("pianta"));
   $("view-iso").setAttribute("aria-pressed", ui.vista === "iso");
@@ -809,6 +817,8 @@
     if (/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); e.shiftKey ? ripeti() : annulla(); return; }
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") { e.preventDefault(); ripeti(); return; }
+    if (!e.ctrlKey && !e.metaKey && e.key.toLowerCase() === "q") { tavolo.ruota(-1); return; }
+    if (!e.ctrlKey && !e.metaKey && e.key.toLowerCase() === "e") { tavolo.ruota(1); return; }
     if (e.key === "Escape") { ui.selezionata = null; aggiorna(); }
     if ((e.key === "Delete" || e.key === "Backspace") && ui.selezionata != null) { e.preventDefault(); rimuovi(ui.selezionata); }
     if (e.key === "n" && stato.lotta.attiva) passaTurno(1);
