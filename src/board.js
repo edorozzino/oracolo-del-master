@@ -186,7 +186,7 @@
       const drag = azione && azione.tipo === "pedina"
         ? { id: azione.id, da: azione.da, a: azione.a, piedi: Math.max(Math.abs(azione.a.x - azione.da.x), Math.abs(azione.a.y - azione.da.y)) * 5 }
         : null;
-      window.Iso.disegna(ctx, w, h, st, view, isoCache, { sel: api.selezionata(), turno: api.turnoCorrente(), drag });
+      window.Iso.disegna(ctx, w, h, st, view, isoCache, { sel: api.selezionata(), turno: api.turnoCorrente(), drag, stanza: celleStanza() });
     }
     function disegnaPianta() {
       const st = api.stato(), s = view.s;
@@ -195,6 +195,11 @@
       ctx.imageSmoothingEnabled = true;
       ctx.drawImage(cache, view.ox, view.oy, st.cols * s, st.rows * s);
       ctx.strokeStyle = "rgba(201,162,74,.5)"; ctx.lineWidth = 1.5; ctx.strokeRect(view.ox, view.oy, st.cols * s, st.rows * s);
+      const sz = celleStanza();
+      if (sz) {
+        for (const [x, y, bordo] of sz.celle) { ctx.fillStyle = bordo ? "rgba(244,210,122,.55)" : "rgba(244,210,122,.18)"; ctx.fillRect(view.ox + x * s, view.oy + y * s, s, s); }
+        etichettaStanza(sz, view.ox + (sz.x1 + 1) * s, view.oy + (sz.y1 + 1) * s);
+      }
 
       const sel = api.selezionata(), turno = api.turnoCorrente();
       const ordine = st.pedine.slice().sort((a, b) => (a.pf <= 0) - (b.pf <= 0) || (a.id === sel) - (b.id === sel));
@@ -227,6 +232,13 @@
       }
     }
 
+    function etichettaStanza(sz, x, y) {
+      const label = sz.w * 5 + " × " + sz.h * 5 + " ft";
+      ctx.font = "700 14px 'Alegreya Sans SC', 'Trebuchet MS', sans-serif";
+      const tw = ctx.measureText(label).width + 14, lx = Math.min(w - tw - 4, Math.max(4, x)), ly = Math.min(h - 28, Math.max(4, y + 6));
+      ctx.fillStyle = "rgba(10,22,19,.9)"; ctx.fillRect(lx, ly, tw, 24);
+      ctx.fillStyle = "#f4d27a"; ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.fillText(label, lx + 7, ly + 12);
+    }
     function aCasella(e) {
       const r = canvas.getBoundingClientRect();
       const px = e.clientX - r.left, py = e.clientY - r.top;
@@ -274,6 +286,8 @@
       }
       const p = aCasella(e);
       if (api.modo() === "pennello" || api.modo() === "gomma") { azione = { tipo: "pennello" }; dipingi(p); return; }
+      if (api.modo() === "stanza") { const c = dentro(p); azione = { tipo: "stanza", da: c, a: c }; richiedi(); return; }
+      if (api.modo() === "posa") { azione = { tipo: "posa", p, sx: e.clientX, sy: e.clientY, ox: view.ox, oy: view.oy, mosso: false }; return; }
       const t = pedinaIn(p);
       if (t) {
         azione = { tipo: "pedina", id: t.id, da: { x: t.x, y: t.y }, a: { x: t.x, y: t.y }, offX: p.x - t.x, offY: p.y - t.y, mosso: false };
@@ -296,6 +310,13 @@
         richiedi(); return;
       }
       const p = aCasella(e);
+      if (azione.tipo === "stanza") { const c = dentro(p); if (c.x !== azione.a.x || c.y !== azione.a.y) { azione.a = c; richiedi(); } return; }
+      if (azione.tipo === "posa") { // trascinare sposta la mappa, toccare posa la pedina
+        const dx = e.clientX - azione.sx, dy = e.clientY - azione.sy;
+        if (Math.abs(dx) + Math.abs(dy) > 8) azione.mosso = true;
+        if (azione.mosso) { view.ox = azione.ox + dx; view.oy = azione.oy + dy; richiedi(); }
+        return;
+      }
       if (azione.tipo === "pennello") dipingi(p);
       else if (azione.tipo === "pan") {
         const dx = e.clientX - azione.sx, dy = e.clientY - azione.sy;
@@ -324,6 +345,18 @@
         const fermo = !azione.mosso; azione = null;
         if (fermo) api.seleziona(null); else disegna();
       } else if (azione.tipo === "pennello") { azione = null; api.dipinto(); }
+      else if (azione.tipo === "stanza") { const { da, a } = azione; azione = null; api.stanza(da, a); }
+      else if (azione.tipo === "posa") { const { p, mosso } = azione; azione = null; if (!mosso) api.posa(dentro(p)); else disegna(); }
+    }
+    function dentro(p) { const st = api.stato(); return { x: Math.max(0, Math.min(st.cols - 1, p.x)), y: Math.max(0, Math.min(st.rows - 1, p.y)) }; }
+    // anteprima della stanza mentre la si trascina: il bordo che diventerà muro
+    function celleStanza() {
+      if (!azione || azione.tipo !== "stanza") return null;
+      const x0 = Math.min(azione.da.x, azione.a.x), x1 = Math.max(azione.da.x, azione.a.x);
+      const y0 = Math.min(azione.da.y, azione.a.y), y1 = Math.max(azione.da.y, azione.a.y);
+      const celle = [];
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) celle.push([x, y, x === x0 || x === x1 || y === y0 || y === y1]);
+      return { celle, w: x1 - x0 + 1, h: y1 - y0 + 1, x1, y1 };
     }
     canvas.addEventListener("pointerup", fine);
     canvas.addEventListener("pointercancel", fine);

@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,400;0,700;1,400&family=Alegreya+Sans+SC:wght@500;700&family=IM+Fell+English+SC&display=swap">
-<link rel="stylesheet" href="src/style.css?v=202611051341">
+<link rel="stylesheet" href="src/style.css?v=202611051402">
 </head>
 <body>
 <div class="app">
@@ -31,19 +31,15 @@
     <section class="stage" aria-label="Mappa">
       <div class="toolbar">
         <div class="seg" role="group" aria-label="Strumento">
-          <button type="button" id="mode-move" class="seg-btn" aria-pressed="true">Muovi</button>
-          <button type="button" id="mode-paint" class="seg-btn" aria-pressed="false">Dipingi</button>
-          <button type="button" id="mode-erase" class="seg-btn" aria-pressed="false">Gomma</button>
+          <button type="button" id="mode-move" data-modo="muovi" class="seg-btn" aria-pressed="true">Muovi</button>
+          <button type="button" id="mode-paint" data-modo="pennello" class="seg-btn" aria-pressed="false">Dipingi</button>
+          <button type="button" id="mode-erase" data-modo="gomma" class="seg-btn" aria-pressed="false">Gomma</button>
+          <button type="button" id="mode-room" data-modo="stanza" class="seg-btn" aria-pressed="false">Stanza</button>
+          <button type="button" id="mode-add" data-modo="posa" class="seg-btn" aria-pressed="false">Aggiungi</button>
         </div>
         <div class="seg" role="group" aria-label="Vista">
           <button type="button" id="view-iso" class="seg-btn" aria-pressed="true">3D</button>
           <button type="button" id="view-top" class="seg-btn" aria-pressed="false">Pianta</button>
-        </div>
-        <span class="brush-chip" id="brush-chip" hidden></span>
-        <div class="seg" role="group" aria-label="Dimensione del pennello" id="brush-size" hidden>
-          <button type="button" class="seg-btn" data-size="1" aria-pressed="true" aria-label="1 casella">1</button>
-          <button type="button" class="seg-btn" data-size="2" aria-pressed="false" aria-label="2 per 2 caselle">2</button>
-          <button type="button" class="seg-btn" data-size="3" aria-pressed="false" aria-label="3 per 3 caselle">3</button>
         </div>
         <div class="seg only-game" role="group" aria-label="Pannello">
           <button type="button" id="btn-pannello" class="seg-btn" aria-pressed="false">Pannello</button>
@@ -64,6 +60,7 @@
       <div class="board-wrap">
         <canvas id="board" aria-label="Mappa di gioco: trascina le pedine per muoverle"></canvas>
         <div class="hud" id="hud" hidden></div>
+        <div class="vassoio" id="vassoio" hidden></div>
         <div class="toast" id="toast" role="status" aria-live="polite"></div>
         <div class="snack" id="snack" role="status" aria-live="polite" hidden></div>
       </div>
@@ -162,13 +159,13 @@
     </aside>
   </div>
 </div>
-<script src="src/data.js?v=202611051341"></script>
-<script src="src/generator.js?v=202611051341"></script>
-<script src="src/bestiario.js?v=202611051341"></script>
-<script src="src/mapgen.js?v=202611051341"></script>
-<script src="src/figure.js?v=202611051341"></script>
-<script src="src/iso.js?v=202611051341"></script>
-<script src="src/board.js?v=202611051341"></script>
-<script src="src/app.js?v=202611051341"></script>
+<script src="src/data.js?v=202611051402"></script>
+<script src="src/generator.js?v=202611051402"></script>
+<script src="src/bestiario.js?v=202611051402"></script>
+<script src="src/mapgen.js?v=202611051402"></script>
+<script src="src/figure.js?v=202611051402"></script>
+<script src="src/iso.js?v=202611051402"></script>
+<script src="src/board.js?v=202611051402"></script>
+<script src="src/app.js?v=202611051402"></script>
 </body>
 </html>

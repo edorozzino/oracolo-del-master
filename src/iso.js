@@ -369,6 +369,21 @@
       return { t, pos, d: pos.x + pos.y + 2 * (t.taglia - 1) + .5 };
     }).sort((a, b) => a.d - b.d);
 
+    // anteprima della stanza: bordo pieno (muri), interno leggero (pavimento)
+    if (o.stanza) {
+      for (const [x, y, bordo] of o.stanza.celle) {
+        rombo(ctx, view.ox + (x - y) * s, view.oy + (x + y) * s / 2, s);
+        ctx.fillStyle = bordo ? "rgba(244,210,122,.55)" : "rgba(244,210,122,.2)"; ctx.fill();
+        if (bordo) { ctx.strokeStyle = "#f4d27a"; ctx.lineWidth = 1; ctx.stroke(); }
+      }
+      const { x1, y1, w: sw, h: sh2 } = o.stanza, label = sw * 5 + " × " + sh2 * 5 + " ft";
+      const lx = view.ox + (x1 - y1) * s, ly = view.oy + (x1 + y1 + 2) * s / 2 + 6;
+      ctx.font = "700 14px 'Alegreya Sans SC', 'Trebuchet MS', sans-serif";
+      const tw = ctx.measureText(label).width + 14;
+      ctx.fillStyle = "rgba(10,22,19,.9)"; ctx.fillRect(lx - tw / 2, ly, tw, 24);
+      ctx.fillStyle = "#f4d27a"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(label, lx, ly + 12);
+    }
+
     // evidenzia la destinazione durante il trascinamento
     if (o.drag) {
       const t = st.pedine.find((p) => p.id === o.drag.id);

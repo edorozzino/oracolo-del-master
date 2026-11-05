@@ -10,7 +10,8 @@
 
   // ---------------- stato ----------------
   let stato = carica() || null;
-  const ui = { vista: leggiVista(), dimensione: 1, modo: "muovi", pennello: ID.muro, selezionata: null, tab: "scena", adv: "normale" };
+  const ui = { vista: leggiVista(), dimensione: 1, pavimento: ID.pietra, vassoioTab: "mostri",
+    posa: { tipo: "mostro", chiave: "goblin" }, ultimoMostro: "goblin", ultimoEroe: { stirpe: "elfo", classe: "ranger" }, modo: "muovi", pennello: ID.muro, selezionata: null, tab: "scena", adv: "normale" };
 
   function leggiVista() { try { return localStorage.getItem("oracolo-vista") === "pianta" ? "pianta" : "iso"; } catch (e) { return "iso"; } }
   function carica() {
@@ -57,9 +58,10 @@
   }
   function creaMostro(chiave) {
     const m = B[chiave];
-    const colore = COLORI_MOSTRI[Object.keys(B).indexOf(chiave) % COLORI_MOSTRI.length];
+    const colore = coloreMostro(chiave);
     return nuovaPedina({ tipo: "mostro", razza: chiave, nome: nomeUnico(m.nome), colore, pf: m.pf, pfMax: m.pf, ca: m.ca, init: m.init, vel: m.vel, taglia: m.taglia, gs: m.gs });
   }
+  function coloreMostro(chiave) { return COLORI_MOSTRI[Math.max(0, Object.keys(B).indexOf(chiave)) % COLORI_MOSTRI.length]; }
   function creaPG(i) {
     const base = window.PG_BASE[i % window.PG_BASE.length];
     const nuovo = i >= window.PG_BASE.length || stato.pedine.some((p) => p.nome === base.nome);
@@ -261,16 +263,8 @@
     $("palette").innerHTML = TERRENI.map((t, i) => `
       <button type="button" class="swatch" data-terreno="${i}" aria-pressed="${ui.modo === "pennello" && ui.pennello === i}">
         <span class="sw" style="background:${t.col}"></span>${esc(t.nome)}</button>`).join("");
-    const chip = $("brush-chip");
-    chip.hidden = ui.modo === "muovi";
-    chip.innerHTML = ui.modo === "gomma"
-      ? `<span class="sw eraser"></span>Gomma`
-      : `<span class="sw" style="background:${TERRENI[ui.pennello].col}"></span>${esc(TERRENI[ui.pennello].nome)}`;
-    $("brush-size").hidden = ui.modo === "muovi";
-    $("brush-size").querySelectorAll("[data-size]").forEach((b) => b.setAttribute("aria-pressed", +b.dataset.size === ui.dimensione));
-    $("mode-move").setAttribute("aria-pressed", ui.modo === "muovi");
-    $("mode-paint").setAttribute("aria-pressed", ui.modo === "pennello");
-    $("mode-erase").setAttribute("aria-pressed", ui.modo === "gomma");
+    document.querySelectorAll("[data-modo]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.modo === ui.modo));
+    renderVassoio();
   }
 
   function renderLista() {
@@ -407,6 +401,105 @@
 
   // Gomma: al posto di muri, alberi, mobili, acqua... mette il terreno più comune lì intorno.
   const SUOLI = [ID.erba, ID.pietra, ID.legno, ID.sabbia];
+
+  // ---------------- strumenti sulla mappa ----------------
+  function scegliModo(m) {
+    ui.modo = m;
+    renderPalette();
+    tavolo && tavolo.disegna();
+    if (m === "posa") toast("Scegli chi aggiungere, poi tocca la mappa.");
+  }
+
+  // Stanza: bordo di muri, pavimento dentro, una porta sul lato verso chi guarda.
+  function disegnaStanza(da, a) {
+    const x0 = Math.min(da.x, a.x), x1 = Math.max(da.x, a.x), y0 = Math.min(da.y, a.y), y1 = Math.max(da.y, a.y);
+    const w = x1 - x0 + 1, h = y1 - y0 + 1;
+    const prima = stato.celle.slice(), posPrima = stato.pedine.map((t) => [t.id, t.x, t.y]);
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+      const bordo = x === x0 || x === x1 || y === y0 || y === y1;
+      stato.celle[y * stato.cols + x] = bordo ? ID.muro : ui.pavimento;
+    }
+    if (w >= 3 && h >= 3) stato.celle[y1 * stato.cols + ((x0 + x1) >> 1)] = ID.porta;
+    // chi è rimasto dentro un muro viene spostato nella casella libera più vicina
+    for (const t of stato.pedine) {
+      if (!window.Mappe.passabile(stato.celle[t.y * stato.cols + t.x])) posa(t, t.x, t.y, occupate(t.id));
+    }
+    tavolo.terrenoCambiato(); aggiorna();
+    avviso("Stanza di " + w * 5 + " × " + h * 5 + " ft.", "Annulla", () => {
+      stato.celle = prima;
+      for (const [id, x, y] of posPrima) { const t = trova(id); if (t) { t.x = x; t.y = y; } }
+      tavolo.terrenoCambiato(); aggiorna();
+    });
+  }
+
+  // Aggiungi: posa l'eroe o il mostro scelto nella casella toccata (o la più vicina libera).
+  function posaQui(c) {
+    let t;
+    if (ui.posa.tipo === "pg") {
+      t = creaPG(stato.pedine.filter((p) => p.tipo === "pg").length);
+      t.stirpe = ui.posa.stirpe; t.classe = ui.posa.classe;
+      t.nome = nomeUnico(window.Figure.CLASSI[t.classe].nome);
+      t.vel = ["nano", "halfling", "gnomo"].includes(t.stirpe) ? 25 : 30;
+    } else t = creaMostro(ui.posa.chiave);
+    posa(t, c.x, c.y, occupate());
+    stato.pedine.push(t);
+    if (stato.lotta.attiva) { t.iniziativa = window.Dadi.d20(t.init || 0).totale; ordinaIniziativa(); registra(t.nome + " entra in combattimento (iniziativa " + t.iniziativa + ")."); }
+    else registra(t.nome + " entra in scena.", "scena");
+    ui.selezionata = t.id;
+    aggiorna();
+    toast(t.nome + " aggiunto.");
+  }
+
+  // Vassoio: i comandi dello strumento attivo, sopra la mappa (anche a schermo intero).
+  let chiaveVassoio = "";
+  function renderVassoio(forza) {
+    const v = $("vassoio"); if (!v) return;
+    const m = ui.modo;
+    const chiave = JSON.stringify([m, ui.dimensione, ui.pennello, ui.pavimento, ui.vassoioTab, ui.posa]);
+    if (!forza && chiave === chiaveVassoio) return;
+    chiaveVassoio = chiave;
+    v.hidden = m === "muovi";
+    if (m === "muovi") { v.innerHTML = ""; altezzaVassoio(); return; }
+    const dim = `<div class="seg" role="group" aria-label="Dimensione">${[1, 2, 3].map((n) =>
+      `<button type="button" class="seg-btn" data-size="${n}" aria-pressed="${ui.dimensione === n}">${n}×${n}</button>`).join("")}</div>`;
+    let html = "";
+    if (m === "pennello") {
+      html = `<div class="v-row"><span class="v-label">Dipingi</span>${dim}</div>
+        <div class="v-swatches">${TERRENI.map((t, i) => `<button type="button" class="v-sw" data-terreno="${i}" aria-pressed="${ui.pennello === i}"><span class="sw" style="background:${t.col}"></span>${esc(t.nome)}</button>`).join("")}</div>`;
+    } else if (m === "gomma") {
+      html = `<div class="v-row"><span class="v-label">Gomma</span>${dim}<span class="v-hint">Trascina: muri, alberi, mobili e acqua lasciano il posto al terreno intorno.</span></div>`;
+    } else if (m === "stanza") {
+      html = `<div class="v-row"><span class="v-label">Pavimento</span><div class="seg" role="group">${[ID.pietra, ID.legno, ID.erba, ID.sabbia].map((id) =>
+        `<button type="button" class="seg-btn" data-pav="${id}" aria-pressed="${ui.pavimento === id}">${esc(TERRENI[id].nome)}</button>`).join("")}</div>
+        <span class="v-hint">Trascina da un angolo all'altro: muri sul bordo, pavimento dentro, una porta.</span></div>`;
+    } else if (m === "posa") {
+      const tab = ui.vassoioTab;
+      html = `<div class="v-row"><div class="seg" role="group">
+          <button type="button" class="seg-btn" data-vtab="mostri" aria-pressed="${tab === "mostri"}">Mostri</button>
+          <button type="button" class="seg-btn" data-vtab="eroi" aria-pressed="${tab === "eroi"}">Eroi</button></div>
+        <span class="v-hint">Scegli, poi tocca la mappa dove metterlo. Trascina per spostare la vista.</span></div>`;
+      if (tab === "mostri") html += `<div class="v-grid">${Object.entries(B).map(([k, mm]) =>
+        `<button type="button" class="v-card" data-mostro="${k}" aria-pressed="${ui.posa.tipo === "mostro" && ui.posa.chiave === k}"><canvas class="ritratto" data-anteprima="mostro:${k}"></canvas><span>${esc(mm.nome)}</span><small>GS ${mm.gs}</small></button>`).join("")}</div>`;
+      else html += `<div class="v-row eroe"><canvas class="ritratto big" data-anteprima="pg"></canvas>
+        <label class="field"><span>Razza</span><select id="v-stirpe">${opzioni(window.Figure.RAZZE, ui.posa.stirpe)}</select></label>
+        <label class="field"><span>Classe</span><select id="v-classe">${opzioni(window.Figure.CLASSI, ui.posa.classe)}</select></label></div>`;
+    }
+    const scroll = v.querySelector(".v-grid, .v-swatches"), sl = scroll ? scroll.scrollLeft : 0, st = scroll ? scroll.scrollTop : 0;
+    v.innerHTML = html;
+    const nuovo = v.querySelector(".v-grid, .v-swatches"); if (nuovo) { nuovo.scrollLeft = sl; nuovo.scrollTop = st; }
+    v.querySelectorAll("canvas[data-anteprima]").forEach((c) => {
+      const a = c.dataset.anteprima, nPg = stato.pedine.filter((p) => p.tipo === "pg").length;
+      const t = a === "pg"
+        ? { id: 4242, tipo: "pg", stirpe: ui.posa.stirpe, classe: ui.posa.classe, colore: COLORI_PG[nPg % COLORI_PG.length], pf: 1 }
+        : { id: 4242, tipo: "mostro", razza: a.split(":")[1], colore: coloreMostro(a.split(":")[1]), pf: 1 };
+      window.Figure.ritratto(c, t);
+    });
+    altezzaVassoio();
+  }
+  function altezzaVassoio() {
+    const v = $("vassoio");
+    document.querySelector(".board-wrap").style.setProperty("--vassoio-h", v.hidden ? "0px" : v.offsetHeight + "px");
+  }
   function suoloSotto(x, y) {
     const t = stato.celle[y * stato.cols + x];
     if (SUOLI.includes(t)) return null; // già terreno libero
@@ -437,6 +530,8 @@
     pennello: () => ui.pennello,
     dimensione: () => ui.dimensione,
     suoloSotto,
+    stanza: disegnaStanza,
+    posa: posaQui,
     seleziona(id) { ui.selezionata = id; aggiorna(); },
     mossa(t, piedi) {
       if (stato.lotta.attiva) registra(t.nome + " si muove di " + piedi + " ft.");
@@ -507,13 +602,27 @@
   $("view-top").addEventListener("click", () => impostaVista("pianta"));
   $("view-iso").setAttribute("aria-pressed", ui.vista === "iso");
   $("view-top").setAttribute("aria-pressed", ui.vista === "pianta");
-  $("mode-move").addEventListener("click", () => { ui.modo = "muovi"; renderPalette(); });
-  $("mode-paint").addEventListener("click", () => { ui.modo = "pennello"; renderPalette(); });
-  $("mode-erase").addEventListener("click", () => { ui.modo = "gomma"; renderPalette(); });
-  $("brush-size").addEventListener("click", (e) => {
-    const b = e.target.closest("[data-size]"); if (!b) return;
-    ui.dimensione = +b.dataset.size; renderPalette();
+  document.querySelectorAll("[data-modo]").forEach((b) => b.addEventListener("click", () => scegliModo(b.dataset.modo)));
+  $("vassoio").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.size) ui.dimensione = +b.dataset.size;
+    else if (b.dataset.terreno) ui.pennello = +b.dataset.terreno;
+    else if (b.dataset.pav) ui.pavimento = +b.dataset.pav;
+    else if (b.dataset.vtab) {
+      ui.vassoioTab = b.dataset.vtab;
+      ui.posa = ui.vassoioTab === "eroi" ? Object.assign({ tipo: "pg" }, ui.ultimoEroe) : { tipo: "mostro", chiave: ui.ultimoMostro };
+    } else if (b.dataset.mostro) { ui.posa = { tipo: "mostro", chiave: b.dataset.mostro }; ui.ultimoMostro = b.dataset.mostro; }
+    else return;
+    renderPalette();
   });
+  $("vassoio").addEventListener("change", (e) => {
+    if (e.target.id === "v-stirpe") ui.ultimoEroe.stirpe = e.target.value;
+    else if (e.target.id === "v-classe") ui.ultimoEroe.classe = e.target.value;
+    else return;
+    ui.posa = Object.assign({ tipo: "pg" }, ui.ultimoEroe);
+    renderPalette();
+  });
+  window.addEventListener("resize", altezzaVassoio);
   $("palette").addEventListener("click", (e) => {
     const b = e.target.closest("[data-terreno]"); if (!b) return;
     ui.pennello = +b.dataset.terreno; ui.modo = "pennello"; renderPalette();
@@ -532,7 +641,7 @@
     const v = b.dataset.hud, t = trova(ui.selezionata);
     if (v === "chiudi") { ui.selezionata = null; aggiorna(); }
     else if (v === "rimuovi") rimuovi(t.id);
-    else if (v === "scheda") { ui.tab = "pedine"; renderTabs(); $("p-pedine").scrollIntoView({ behavior: "smooth", block: "start" }); }
+    else if (v === "scheda") { if (document.body.classList.contains("gioco")) pannello(true); ui.tab = "pedine"; renderTabs(); $("p-pedine").scrollIntoView({ behavior: "smooth", block: "start" }); }
     else modificaPF(t, +v);
   });
 

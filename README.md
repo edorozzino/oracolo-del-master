@@ -41,6 +41,7 @@ Tavolo virtuale per chi fa da Master a Dungeons & Dragons 5e. Genera la scena, m
 
 **Schermo intero**
 - Il pulsante *Schermo intero* lascia solo la mappa, con il pannello che si apre di lato
+- Tutti gli strumenti (Dipingi, Gomma, Stanza, Aggiungi) hanno i loro comandi in un vassoio sopra la mappa: si costruisce la scena senza uscire, comodo su tablet
 - Su iPhone: in Safari *Condividi → Aggiungi alla schermata Home* e il gioco si apre come un'app, senza barre del browser
 
 Il tavolo si salva da solo nel browser: chiudi la pagina e riprendi da dove eri.
@@ -53,6 +54,8 @@ Il tavolo si salva da solo nel browser: chiudi la pagina e riprendi da dove eri.
 | Spostare la mappa | trascina uno spazio vuoto |
 | Zoom | rotella, due dita, o i pulsanti − / + |
 | Dipingere il terreno | scegli un terreno in *Scena → Pennello* e trascina sulla mappa |
+| Disegnare una stanza | *Stanza*, scegli il pavimento e trascina da un angolo all'altro: muri, pavimento e porta |
+| Aggiungere eroi e mostri | *Aggiungi*, scegli dalla galleria (o razza e classe per un eroe) e tocca la mappa |
 | Cancellare elementi | *Gomma* e trascina: muri, alberi, mobili, acqua spariscono e torna il terreno intorno |
 | Pennello più grande | con *Dipingi* o *Gomma* attivi, scegli 1, 2 o 3 caselle |
 | Turno successivo | pulsante *Prossimo turno* o tasto `N` |

@@ -315,3 +315,39 @@ body.gioco .turn-text .muted { display: none; }
 body.gioco .btn-main.small { font-size: 14px; padding: 4px 10px; white-space: nowrap; }
 
 .sw.eraser { background: repeating-linear-gradient(45deg, #ece3cf 0 4px, #c9a24a 4px 8px); }
+
+/* ---------- vassoio degli strumenti sulla mappa ---------- */
+.vassoio {
+  position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 4;
+  max-height: 46%; overflow: auto; display: grid; gap: 8px;
+  background: rgba(10,22,19,.93); border: 1px solid var(--brass-dim, #8a6f33); border-radius: 10px;
+  padding: 8px 10px; box-shadow: 0 8px 24px rgba(0,0,0,.5);
+}
+.v-row { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.v-row.eroe { flex-wrap: nowrap; align-items: end; }
+.v-row.eroe .field { flex: 1; min-width: 0; }
+.v-label { font-family: var(--f-display); font-size: 18px; color: var(--bone); }
+.v-hint { font-size: 14px; color: var(--muted); }
+.v-swatches { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: thin; }
+.v-sw {
+  flex: none; display: flex; gap: 8px; align-items: center; min-height: 44px; padding: 6px 12px;
+  background: var(--felt-2); border: 1px solid var(--line); border-radius: 8px; font-size: 15px; white-space: nowrap;
+}
+.v-sw .sw { width: 22px; height: 22px; }
+.v-sw[aria-pressed="true"] { border-color: var(--brass); box-shadow: inset 0 0 0 1px var(--brass); color: var(--brass-hi); }
+.v-grid { display: grid; grid-auto-flow: column; grid-auto-columns: 84px; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+.v-card {
+  display: grid; justify-items: center; gap: 2px; padding: 6px 4px; background: var(--felt-2);
+  border: 1px solid var(--line); border-radius: 8px; font-size: 13px; line-height: 1.15; text-align: center;
+}
+.v-card .ritratto { width: 48px; height: 56px; }
+.v-card small { font-family: var(--f-label); font-size: 11px; color: var(--muted); }
+.v-card[aria-pressed="true"] { border-color: var(--brass); box-shadow: inset 0 0 0 1px var(--brass); }
+.hud { bottom: calc(10px + var(--vassoio-h, 0px)) !important; }
+
+/* tablet e telefoni: comandi più grandi da toccare */
+@media (pointer: coarse) {
+  .seg-btn { padding: 9px 13px; font-size: 16px; }
+  .v-sw { min-height: 48px; }
+  .token-del { width: 40px; height: 40px; }
+}
