@@ -10,7 +10,7 @@
 
   // ---------------- stato ----------------
   let stato = carica() || null;
-  const ui = { vista: leggiVista(), modo: "muovi", pennello: ID.muro, selezionata: null, tab: "scena", adv: "normale" };
+  const ui = { vista: leggiVista(), dimensione: 1, modo: "muovi", pennello: ID.muro, selezionata: null, tab: "scena", adv: "normale" };
 
   function leggiVista() { try { return localStorage.getItem("oracolo-vista") === "pianta" ? "pianta" : "iso"; } catch (e) { return "iso"; } }
   function carica() {
@@ -262,10 +262,15 @@
       <button type="button" class="swatch" data-terreno="${i}" aria-pressed="${ui.modo === "pennello" && ui.pennello === i}">
         <span class="sw" style="background:${t.col}"></span>${esc(t.nome)}</button>`).join("");
     const chip = $("brush-chip");
-    chip.hidden = ui.modo !== "pennello";
-    chip.innerHTML = `<span class="sw" style="background:${TERRENI[ui.pennello].col}"></span>${esc(TERRENI[ui.pennello].nome)}`;
+    chip.hidden = ui.modo === "muovi";
+    chip.innerHTML = ui.modo === "gomma"
+      ? `<span class="sw eraser"></span>Gomma`
+      : `<span class="sw" style="background:${TERRENI[ui.pennello].col}"></span>${esc(TERRENI[ui.pennello].nome)}`;
+    $("brush-size").hidden = ui.modo === "muovi";
+    $("brush-size").querySelectorAll("[data-size]").forEach((b) => b.setAttribute("aria-pressed", +b.dataset.size === ui.dimensione));
     $("mode-move").setAttribute("aria-pressed", ui.modo === "muovi");
     $("mode-paint").setAttribute("aria-pressed", ui.modo === "pennello");
+    $("mode-erase").setAttribute("aria-pressed", ui.modo === "gomma");
   }
 
   function renderLista() {
@@ -400,6 +405,24 @@
     salva();
   }
 
+  // Gomma: al posto di muri, alberi, mobili, acqua... mette il terreno più comune lì intorno.
+  const SUOLI = [ID.erba, ID.pietra, ID.legno, ID.sabbia];
+  function suoloSotto(x, y) {
+    const t = stato.celle[y * stato.cols + x];
+    if (SUOLI.includes(t)) return null; // già terreno libero
+    for (const r of [1, 2, 4]) {
+      const conta = new Map();
+      for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+        const nx = x + dx, ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= stato.cols || ny >= stato.rows) continue;
+        const v = stato.celle[ny * stato.cols + nx];
+        if (SUOLI.includes(v)) conta.set(v, (conta.get(v) || 0) + 1);
+      }
+      if (conta.size) return [...conta.entries()].sort((a, b) => b[1] - a[1])[0][0];
+    }
+    return ID.pietra;
+  }
+
   // ---------------- tavolo ----------------
   let tavolo = null;
   if (!stato) { stato = null; generaScena("dungeon", "media"); }
@@ -412,6 +435,8 @@
     modo: () => ui.modo,
     vista: () => ui.vista,
     pennello: () => ui.pennello,
+    dimensione: () => ui.dimensione,
+    suoloSotto,
     seleziona(id) { ui.selezionata = id; aggiorna(); },
     mossa(t, piedi) {
       if (stato.lotta.attiva) registra(t.nome + " si muove di " + piedi + " ft.");
@@ -484,6 +509,11 @@
   $("view-top").setAttribute("aria-pressed", ui.vista === "pianta");
   $("mode-move").addEventListener("click", () => { ui.modo = "muovi"; renderPalette(); });
   $("mode-paint").addEventListener("click", () => { ui.modo = "pennello"; renderPalette(); });
+  $("mode-erase").addEventListener("click", () => { ui.modo = "gomma"; renderPalette(); });
+  $("brush-size").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-size]"); if (!b) return;
+    ui.dimensione = +b.dataset.size; renderPalette();
+  });
   $("palette").addEventListener("click", (e) => {
     const b = e.target.closest("[data-terreno]"); if (!b) return;
     ui.pennello = +b.dataset.terreno; ui.modo = "pennello"; renderPalette();

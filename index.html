@@ -33,12 +33,18 @@
         <div class="seg" role="group" aria-label="Strumento">
           <button type="button" id="mode-move" class="seg-btn" aria-pressed="true">Muovi</button>
           <button type="button" id="mode-paint" class="seg-btn" aria-pressed="false">Dipingi</button>
+          <button type="button" id="mode-erase" class="seg-btn" aria-pressed="false">Gomma</button>
         </div>
         <div class="seg" role="group" aria-label="Vista">
           <button type="button" id="view-iso" class="seg-btn" aria-pressed="true">3D</button>
           <button type="button" id="view-top" class="seg-btn" aria-pressed="false">Pianta</button>
         </div>
         <span class="brush-chip" id="brush-chip" hidden></span>
+        <div class="seg" role="group" aria-label="Dimensione del pennello" id="brush-size" hidden>
+          <button type="button" class="seg-btn" data-size="1" aria-pressed="true" aria-label="1 casella">1</button>
+          <button type="button" class="seg-btn" data-size="2" aria-pressed="false" aria-label="2 per 2 caselle">2</button>
+          <button type="button" class="seg-btn" data-size="3" aria-pressed="false" aria-label="3 per 3 caselle">3</button>
+        </div>
         <div class="seg only-game" role="group" aria-label="Pannello">
           <button type="button" id="btn-pannello" class="seg-btn" aria-pressed="false">Pannello</button>
         </div>

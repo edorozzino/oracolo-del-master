@@ -53,6 +53,8 @@ Il tavolo si salva da solo nel browser: chiudi la pagina e riprendi da dove eri.
 | Spostare la mappa | trascina uno spazio vuoto |
 | Zoom | rotella, due dita, o i pulsanti − / + |
 | Dipingere il terreno | scegli un terreno in *Scena → Pennello* e trascina sulla mappa |
+| Cancellare elementi | *Gomma* e trascina: muri, alberi, mobili, acqua spariscono e torna il terreno intorno |
+| Pennello più grande | con *Dipingi* o *Gomma* attivi, scegli 1, 2 o 3 caselle |
 | Turno successivo | pulsante *Prossimo turno* o tasto `N` |
 | Togliere una pedina | × accanto al nome in *Pedine*, *Togli* nella scheda rapida, o `Canc`; poi *Annulla* se ti sei sbagliato |
 | Togliere più mostri | *Pedine → Togli i mostri sconfitti* o *Togli tutti i mostri* |

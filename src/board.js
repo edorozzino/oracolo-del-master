@@ -243,12 +243,24 @@
       }
       return null;
     }
+    // Pennello e gomma: agiscono su un quadrato di 1, 2 o 3 caselle attorno al dito.
     function dipingi(p) {
-      const st = api.stato();
-      if (p.x < 0 || p.y < 0 || p.x >= st.cols || p.y >= st.rows) return;
-      const i = p.y * st.cols + p.x, b = api.pennello();
-      if (st.celle[i] === b) return;
-      st.celle[i] = b; aggiornaCasella(p.x, p.y); isoSporca = true; richiedi();
+      const st = api.stato(), n = api.dimensione ? api.dimensione() : 1, gomma = api.modo() === "gomma";
+      const d0 = -Math.floor((n - 1) / 2);
+      const celle = [];
+      for (let dy = d0; dy < d0 + n; dy++) for (let dx = d0; dx < d0 + n; dx++) {
+        const x = p.x + dx, y = p.y + dy;
+        if (x >= 0 && y >= 0 && x < st.cols && y < st.rows) celle.push([x, y]);
+      }
+      // la gomma decide il terreno di tutte le caselle prima di cambiarle
+      const nuovi = celle.map(([x, y]) => (gomma ? api.suoloSotto(x, y) : api.pennello()));
+      let cambiato = false;
+      celle.forEach(([x, y], k) => {
+        const i = y * st.cols + x, b = nuovi[k];
+        if (b == null || st.celle[i] === b) return;
+        st.celle[i] = b; aggiornaCasella(x, y); cambiato = true;
+      });
+      if (cambiato) { isoSporca = true; richiedi(); }
     }
 
     canvas.addEventListener("pointerdown", (e) => {
@@ -261,7 +273,7 @@
         disegna(); return;
       }
       const p = aCasella(e);
-      if (api.modo() === "pennello") { azione = { tipo: "pennello" }; dipingi(p); return; }
+      if (api.modo() === "pennello" || api.modo() === "gomma") { azione = { tipo: "pennello" }; dipingi(p); return; }
       const t = pedinaIn(p);
       if (t) {
         azione = { tipo: "pedina", id: t.id, da: { x: t.x, y: t.y }, a: { x: t.x, y: t.y }, offX: p.x - t.x, offY: p.y - t.y, mosso: false };

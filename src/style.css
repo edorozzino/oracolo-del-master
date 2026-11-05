@@ -313,3 +313,5 @@ body.gioco .turn-text { font-size: 14px; white-space: nowrap; overflow: hidden; 
 body.gioco .turn-text b { font-size: 17px; }
 body.gioco .turn-text .muted { display: none; }
 body.gioco .btn-main.small { font-size: 14px; padding: 4px 10px; white-space: nowrap; }
+
+.sw.eraser { background: repeating-linear-gradient(45deg, #ece3cf 0 4px, #c9a24a 4px 8px); }
