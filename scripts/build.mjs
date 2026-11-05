@@ -8,8 +8,8 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
 let html = read("index.html")
-  .replace(/<link rel="stylesheet" href="src\/style\.css">/, () => `<style>\n${read("src/style.css")}\n</style>`)
-  .replace(/<script src="(src\/[^"]+)"><\/script>/g, (_, p) => `<script>\n${read(p)}\n</script>`);
+  .replace(/<link rel="stylesheet" href="src\/style\.css(\?v=\d+)?">/, () => `<style>\n${read("src/style.css")}\n</style>`)
+  .replace(/<script src="(src\/[^"?]+)(\?v=\d+)?"><\/script>/g, (_, p) => `<script>\n${read(p)}\n</script>`);
 
 // manifest e icona servono solo alla versione pubblicata dal repository
 html = html.replace(/^.*(rel="manifest"|rel="apple-touch-icon").*\n/gm, "");

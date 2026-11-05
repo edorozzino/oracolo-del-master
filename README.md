@@ -82,6 +82,8 @@ git push -u origin main
 
 Poi su GitHub: *Settings → Pages → Deploy from branch → main / root*.
 
+Prima di ogni pubblicazione lancia `node scripts/versione.mjs`: aggiorna il numero di versione dei file, così i telefoni scaricano subito il codice nuovo invece di usare quello in cache.
+
 ## Struttura
 
 ```
