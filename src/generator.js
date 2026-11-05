@@ -30,7 +30,7 @@
       make(rng) {
         return {
           title: pick(rng, D.atmosfere.meteo),
-          body: cap(pick(rng, D.atmosfere.momenti)) + ". Si sente " + pick(rng, D.atmosfere.suoni) + ".",
+          body: cap(pick(rng, D.atmosfere.momenti)) + ". Nell'aria: " + pick(rng, D.atmosfere.suoni) + ".",
           meta: []
         };
       }
@@ -38,9 +38,10 @@
     {
       id: "png", label: "PNG", glyph: "☉", die: 10,
       make(rng) {
+        const g = rng() < 0.5 ? 0 : 1;
         return {
-          title: pick(rng, D.png.nomi),
-          body: cap(pick(rng, D.png.razze)) + ", " + pick(rng, D.png.mestieri) + ". " +
+          title: pick(rng, D.png.nomi)[g],
+          body: cap(pick(rng, D.png.razze)[g]) + ", " + pick(rng, D.png.mestieri)[g] + ". " +
             cap(pick(rng, D.png.tratti)) + ".",
           meta: [["Segreto", pick(rng, D.png.segreti)]]
         };
@@ -52,7 +53,7 @@
         return {
           title: cap(pick(rng, D.minacce.creature)),
           body: cap(pick(rng, D.minacce.moventi)) + ".",
-          meta: [["Sfida", pick(rng, D.minacce.sfide)], ["Numero", String(roll(rng, 4))]]
+          meta: [["Sfida", pick(rng, D.minacce.sfide)]]
         };
       }
     },
