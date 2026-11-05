@@ -79,7 +79,8 @@ h1 { font-family: var(--f-display); font-weight: 400; margin: 0; font-size: clam
 /* mappa */
 .board-wrap {
   position: relative; border-radius: 10px; overflow: hidden;
-  background: var(--felt-deep); border: 1px solid var(--line);
+  background: radial-gradient(ellipse at 50% 45%, #1d2b25 0%, #0b1311 70%, #060a09 100%);
+  border: 1px solid var(--line);
   height: clamp(340px, 62svh, 820px);
   box-shadow: inset 0 0 40px rgba(0,0,0,.6);
 }

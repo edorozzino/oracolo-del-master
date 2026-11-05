@@ -1,8 +1,12 @@
 # Oracolo del Master
 
+![Anteprima](docs/anteprima.png)
+
 Tavolo virtuale per chi fa da Master a Dungeons & Dragons 5e. Genera la scena, mette giocatori e mostri sulla mappa e gestisce il combattimento: tutto in una pagina, senza installare nulla.
 
 ## Cosa fa
+
+**Vista 3D in stile strategico**: la mappa è un plastico isometrico con muri merlati, alberi, rocce, botti e tavoli in rilievo. Le pedine sono figure in piedi con la barra dei PF sopra la testa; i mostri hanno le corna. Chi finisce dietro un muro resta visibile in trasparenza. Il pulsante *Pianta* passa alla classica vista dall'alto.
 
 **Scene e ambientazioni**
 - 5 ambientazioni generate a caso: Dungeon, Caverna, Foresta, Taverna, Rovine
@@ -68,7 +72,8 @@ Poi su GitHub: *Settings → Pages → Deploy from branch → main / root*.
 ```
 index.html          pagina e pannelli
 src/mapgen.js       terreni e generatori di mappe
-src/board.js        mappa su canvas: disegno, pan/zoom, trascinamento, pennello
+src/board.js        mappa su canvas: pan/zoom, trascinamento, pennello, vista dall'alto
+src/iso.js          vista 3D isometrica: terreno, oggetti in rilievo, figure
 src/app.js          stato del tavolo, pedine, combattimento, dadi, salvataggio
 src/bestiario.js    mostri, abitanti per ambientazione, difficoltà, dadi
 src/data.js         tabelle per nomi, atmosfere, PNG, spunti
@@ -80,7 +85,7 @@ scripts/build.mjs   versione a file singolo
 ## Aggiungere contenuti
 
 - **Un mostro**: aggiungi una voce a `BESTIARIO` in `src/bestiario.js`, e il suo nome in `ABITANTI` se vuoi che compaia nelle scene generate.
-- **Un terreno**: aggiungi un elemento a `TERRENI` in `src/mapgen.js` e, se vuoi un disegno speciale, un `case` in `disegnaCasella` dentro `src/board.js`.
+- **Un terreno**: aggiungi un elemento a `TERRENI` in `src/mapgen.js` e, se vuoi un disegno speciale, un `case` in `disegnaCasella` (`src/board.js`, vista dall'alto) e in `disegnaOggetto` (`src/iso.js`, vista 3D).
 - **Un'ambientazione**: scrivi una funzione generatrice in `src/mapgen.js`, registrala in `GENERATORI` e `AMBIENTI`, e dai i suoi abitanti in `ABITANTI`.
 
 ## Idee per il futuro

@@ -89,6 +89,17 @@
     }
     function adatta() {
       const st = api.stato();
+      if (api.vista() === "iso") {
+        Object.assign(view, window.Iso.adatta(w, h, st));
+        if (w < 640 && view.s < 20) { // telefono: figure leggibili, centrate sui giocatori
+          view.s = 20;
+          const pg = st.pedine.filter((p) => p.tipo === "pg");
+          const cx = pg.length ? pg.reduce((a, p) => a + p.x, 0) / pg.length + .5 : st.cols / 2;
+          const cy = pg.length ? pg.reduce((a, p) => a + p.y, 0) / pg.length + .5 : st.rows / 2;
+          window.Iso.centra(view, w, h, (cx + st.cols / 2) / 2, (cy + st.rows / 2) / 2);
+        }
+        adattata = true; disegna(); return;
+      }
       view.s = Math.min(w / st.cols, h / st.rows);
       view.ox = (w - st.cols * view.s) / 2; view.oy = (h - st.rows * view.s) / 2;
       if (view.s < 22) { // telefono: casella leggibile, centrata sui giocatori
@@ -165,7 +176,19 @@
       ctx.restore();
     }
 
-    function disegna() {
+    let isoCache = null, isoSporca = true, raf = 0;
+    function disegna() { if (api.vista() === "iso") disegnaIso(); else disegnaPianta(); }
+    function richiedi() { if (!raf) raf = requestAnimationFrame(() => { raf = 0; disegna(); }); }
+    function disegnaIso() {
+      const st = api.stato();
+      if (isoSporca || !isoCache) { isoCache = window.Iso.costruisci(st); isoSporca = false; }
+      ctx.clearRect(0, 0, w, h);
+      const drag = azione && azione.tipo === "pedina"
+        ? { id: azione.id, da: azione.da, a: azione.a, piedi: Math.max(Math.abs(azione.a.x - azione.da.x), Math.abs(azione.a.y - azione.da.y)) * 5 }
+        : null;
+      window.Iso.disegna(ctx, w, h, st, view, isoCache, { sel: api.selezionata(), turno: api.turnoCorrente(), drag });
+    }
+    function disegnaPianta() {
       const st = api.stato(), s = view.s;
       if (cacheSporca) costruisciCache();
       ctx.clearRect(0, 0, w, h);
@@ -207,10 +230,12 @@
     function aCasella(e) {
       const r = canvas.getBoundingClientRect();
       const px = e.clientX - r.left, py = e.clientY - r.top;
+      if (api.vista() === "iso") return Object.assign({ px, py }, window.Iso.casella(px, py, view));
       return { px, py, x: Math.floor((px - view.ox) / view.s), y: Math.floor((py - view.oy) / view.s) };
     }
     function pedinaIn(p) {
       const st = api.stato();
+      if (api.vista() === "iso") return window.Iso.pedinaIn(p.px, p.py, st, view);
       for (let i = st.pedine.length - 1; i >= 0; i--) {
         const t = st.pedine[i];
         const cx = view.ox + (t.x + t.taglia / 2) * view.s, cy = view.oy + (t.y + t.taglia / 2) * view.s;
@@ -223,7 +248,7 @@
       if (p.x < 0 || p.y < 0 || p.x >= st.cols || p.y >= st.rows) return;
       const i = p.y * st.cols + p.x, b = api.pennello();
       if (st.celle[i] === b) return;
-      st.celle[i] = b; aggiornaCasella(p.x, p.y); disegna();
+      st.celle[i] = b; aggiornaCasella(p.x, p.y); isoSporca = true; richiedi();
     }
 
     canvas.addEventListener("pointerdown", (e) => {
@@ -256,19 +281,19 @@
         const d = Math.hypot(a.x - b.x, a.y - b.y);
         const s2 = Math.max(8, Math.min(120, azione.s0 * d / azione.d0)), k = s2 / azione.s0;
         view.s = s2; view.ox = azione.mx - (azione.mx - azione.ox0) * k; view.oy = azione.my - (azione.my - azione.oy0) * k;
-        disegna(); return;
+        richiedi(); return;
       }
       const p = aCasella(e);
       if (azione.tipo === "pennello") dipingi(p);
       else if (azione.tipo === "pan") {
         const dx = e.clientX - azione.sx, dy = e.clientY - azione.sy;
         if (Math.abs(dx) + Math.abs(dy) > 4) azione.mosso = true;
-        view.ox = azione.ox + dx; view.oy = azione.oy + dy; disegna();
+        view.ox = azione.ox + dx; view.oy = azione.oy + dy; richiedi();
       } else if (azione.tipo === "pedina") {
         const st = api.stato(), t = st.pedine.find((q) => q.id === azione.id);
         const nx = Math.max(0, Math.min(st.cols - t.taglia, p.x - azione.offX));
         const ny = Math.max(0, Math.min(st.rows - t.taglia, p.y - azione.offY));
-        if (nx !== azione.a.x || ny !== azione.a.y) { azione.a = { x: nx, y: ny }; azione.mosso = true; disegna(); }
+        if (nx !== azione.a.x || ny !== azione.a.y) { azione.a = { x: nx, y: ny }; azione.mosso = true; richiedi(); }
       }
     });
 
@@ -300,7 +325,7 @@
 
     return {
       disegna,
-      terrenoCambiato() { cacheSporca = true; disegna(); },
+      terrenoCambiato() { cacheSporca = true; isoSporca = true; disegna(); },
       adatta, zoom
     };
   }

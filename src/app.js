@@ -10,8 +10,9 @@
 
   // ---------------- stato ----------------
   let stato = carica() || null;
-  const ui = { modo: "muovi", pennello: ID.muro, selezionata: null, tab: "scena", adv: "normale" };
+  const ui = { vista: leggiVista(), modo: "muovi", pennello: ID.muro, selezionata: null, tab: "scena", adv: "normale" };
 
+  function leggiVista() { try { return localStorage.getItem("oracolo-vista") === "pianta" ? "pianta" : "iso"; } catch (e) { return "iso"; } }
   function carica() {
     try {
       const s = JSON.parse(localStorage.getItem(CHIAVE));
@@ -352,6 +353,7 @@
     selezionata: () => ui.selezionata,
     turnoCorrente,
     modo: () => ui.modo,
+    vista: () => ui.vista,
     pennello: () => ui.pennello,
     seleziona(id) { ui.selezionata = id; aggiorna(); },
     mossa(t, piedi) {
@@ -373,6 +375,17 @@
     ui.modo = "pennello"; ui.pennello = ID.muro; aggiorna();
   });
 
+  function impostaVista(v) {
+    ui.vista = v;
+    try { localStorage.setItem("oracolo-vista", v); } catch (e) { /* ignorato */ }
+    $("view-iso").setAttribute("aria-pressed", v === "iso");
+    $("view-top").setAttribute("aria-pressed", v === "pianta");
+    tavolo.adatta();
+  }
+  $("view-iso").addEventListener("click", () => impostaVista("iso"));
+  $("view-top").addEventListener("click", () => impostaVista("pianta"));
+  $("view-iso").setAttribute("aria-pressed", ui.vista === "iso");
+  $("view-top").setAttribute("aria-pressed", ui.vista === "pianta");
   $("mode-move").addEventListener("click", () => { ui.modo = "muovi"; renderPalette(); });
   $("mode-paint").addEventListener("click", () => { ui.modo = "pennello"; renderPalette(); });
   $("palette").addEventListener("click", (e) => {
