@@ -114,7 +114,7 @@ h1 { font-family: var(--f-display); font-weight: 400; margin: 0; font-size: clam
 
 /* pannello */
 .panel { background: var(--felt-2); border: 1px solid var(--line); border-radius: 10px; min-width: 0; }
-.tabs { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--felt-2); z-index: 2; }
+.tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--felt-2); z-index: 2; }
 .tabs button {
   background: none; border: 0; padding: 12px 4px 10px; font-family: var(--f-label); font-size: 14px; letter-spacing: .03em;
   color: var(--muted); border-bottom: 2px solid transparent;
@@ -370,3 +370,25 @@ body.gioco .btn-main.small { font-size: 14px; padding: 4px 10px; white-space: no
   background: conic-gradient(from -20deg, var(--blood) 0 40deg, transparent 40deg);
 }
 @media (prefers-reduced-motion: reduce) { .rot-bussola span { transition: none; } }
+
+/* progetti */
+.proj-current { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; align-items: center; }
+.proj-thumb { width: 96px; height: 64px; border-radius: 6px; border: 1px solid var(--line); background: var(--felt-deep); object-fit: cover; display: block; }
+.proj-current input { font-family: var(--f-display); font-size: 19px; }
+.proj-current small, .proj-info small { display: block; font-family: var(--f-label); font-size: 12px; color: var(--muted); }
+.proj-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.proj-item { display: grid; grid-template-columns: 72px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 6px; border: 1px solid transparent; border-radius: 8px; }
+.proj-item.on { border-color: var(--brass); background: rgba(201,162,74,.08); }
+.proj-item .proj-thumb { width: 72px; height: 48px; }
+.proj-info { min-width: 0; }
+.proj-info b { font-weight: 400; font-family: var(--f-display); font-size: 17px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.proj-acts { display: flex; gap: 6px; }
+.proj-acts button { font-family: var(--f-label); font-size: 13px; background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; }
+.proj-acts button:hover { border-color: var(--brass); }
+.proj-acts .danger:hover, .proj-acts .danger.armed { border-color: var(--bad); color: #ff9a8a; }
+.proj-list .empty { color: var(--muted); }
+.check { display: flex; gap: 8px; align-items: center; font-size: 15px; }
+.check input { width: 18px; height: 18px; accent-color: var(--brass); }
+.file-btn { position: relative; overflow: hidden; display: inline-flex; align-items: center; cursor: pointer; }
+.file-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.tabs button { padding-inline: 2px; }

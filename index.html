@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,400;0,700;1,400&family=Alegreya+Sans+SC:wght@500;700&family=IM+Fell+English+SC&display=swap">
-<link rel="stylesheet" href="src/style.css?v=202611052041">
+<link rel="stylesheet" href="src/style.css?v=202611052051">
 </head>
 <body>
 <div class="app">
@@ -83,11 +83,53 @@
         <button type="button" class="btn-ghost" data-storia="ripeti" disabled>Ripeti ↷</button>
       </div>
       <nav class="tabs" role="tablist" aria-label="Sezioni">
+        <button type="button" role="tab" id="t-progetti" aria-controls="p-progetti" aria-selected="false">Progetti</button>
         <button type="button" role="tab" id="t-scena" aria-controls="p-scena" aria-selected="true">Scena</button>
         <button type="button" role="tab" id="t-pedine" aria-controls="p-pedine" aria-selected="false">Pedine</button>
-        <button type="button" role="tab" id="t-lotta" aria-controls="p-lotta" aria-selected="false">Combattimento</button>
+        <button type="button" role="tab" id="t-lotta" aria-controls="p-lotta" aria-selected="false">Lotta</button>
         <button type="button" role="tab" id="t-dadi" aria-controls="p-dadi" aria-selected="false">Dadi</button>
       </nav>
+
+      <!-- PROGETTI -->
+      <div class="tabpanel" role="tabpanel" id="p-progetti" aria-labelledby="t-progetti" hidden>
+        <div class="block">
+          <h2>Progetto aperto</h2>
+          <div class="proj-current" id="proj-current"></div>
+          <div class="row-btns">
+            <button type="button" class="btn-ghost" id="proj-dup">Duplica</button>
+            <button type="button" class="btn-ghost" id="proj-export">Scarica file</button>
+            <label class="btn-ghost file-btn">Carica file<input type="file" id="proj-import" accept=".txt,.json,text/plain,application/json" multiple></label>
+          </div>
+          <p class="note">Ogni modifica si salva da sola su questo dispositivo. <b>Scarica file</b> salva il progetto come file di testo (.txt) nei download: tienilo come copia o aprilo su un altro tablet o telefono con <b>Carica file</b>.</p>
+        </div>
+        <div class="block">
+          <h2>Nuovo progetto</h2>
+          <label class="field"><span>Nome</span><input id="np-nome" type="text" maxlength="40" placeholder="es. Sessione 3 · La cripta"></label>
+          <div class="seg" role="group" aria-label="Tipo di mappa">
+            <button type="button" class="seg-btn" data-np="generata" aria-pressed="true">Generata</button>
+            <button type="button" class="seg-btn" data-np="vuota" aria-pressed="false">Vuota</button>
+          </div>
+          <div class="field-row" id="np-generata">
+            <label class="field"><span>Ambientazione</span><select id="np-ambiente"></select></label>
+            <label class="field"><span>Difficoltà</span><select id="np-diff"></select></label>
+          </div>
+          <div class="field-row" id="np-vuota" hidden>
+            <label class="field"><span>Terreno</span><select id="np-terreno"></select></label>
+            <label class="field"><span>Dimensione</span><select id="np-dim">
+              <option value="16x12">Piccola · 80 × 60 ft</option>
+              <option value="30x20" selected>Media · 150 × 100 ft</option>
+              <option value="40x28">Grande · 200 × 140 ft</option>
+              <option value="56x40">Enorme · 280 × 200 ft</option></select></label>
+          </div>
+          <label class="check"><input type="checkbox" id="np-eroi" checked> Porta gli eroi del progetto aperto</label>
+          <button type="button" class="btn-main" id="np-crea">Crea e apri</button>
+        </div>
+        <div class="block">
+          <h2>I tuoi progetti</h2>
+          <ul class="proj-list" id="proj-list"></ul>
+          <button type="button" class="btn-ghost" id="proj-backup">Scarica tutti i progetti (backup)</button>
+        </div>
+      </div>
 
       <!-- SCENA -->
       <div class="tabpanel" role="tabpanel" id="p-scena" aria-labelledby="t-scena">
@@ -172,13 +214,13 @@
     </aside>
   </div>
 </div>
-<script src="src/data.js?v=202611052041"></script>
-<script src="src/generator.js?v=202611052041"></script>
-<script src="src/bestiario.js?v=202611052041"></script>
-<script src="src/mapgen.js?v=202611052041"></script>
-<script src="src/figure.js?v=202611052041"></script>
-<script src="src/iso.js?v=202611052041"></script>
-<script src="src/board.js?v=202611052041"></script>
-<script src="src/app.js?v=202611052041"></script>
+<script src="src/data.js?v=202611052051"></script>
+<script src="src/generator.js?v=202611052051"></script>
+<script src="src/bestiario.js?v=202611052051"></script>
+<script src="src/mapgen.js?v=202611052051"></script>
+<script src="src/figure.js?v=202611052051"></script>
+<script src="src/iso.js?v=202611052051"></script>
+<script src="src/board.js?v=202611052051"></script>
+<script src="src/app.js?v=202611052051"></script>
 </body>
 </html>

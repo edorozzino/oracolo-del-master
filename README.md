@@ -44,6 +44,13 @@ Tavolo virtuale per chi fa da Master a Dungeons & Dragons 5e. Genera la scena, m
 - Tutti gli strumenti (Dipingi, Gomma, Stanza, Aggiungi) hanno i loro comandi in un vassoio sopra la mappa: si costruisce la scena senza uscire, comodo su tablet
 - Su iPhone: in Safari *Condividi → Aggiungi alla schermata Home* e il gioco si apre come un'app, senza barre del browser
 
+**Progetti**
+- Scheda *Progetti*: tutte le tue mappe con anteprima, ognuna salvata da sola mentre lavori
+- *Nuovo progetto* generato (ambientazione e difficoltà) o vuoto (terreno e dimensione fino a 280 × 200 ft), con o senza gli eroi attuali
+- Apri, duplica, rinomina, elimina
+- *Scarica file* salva il progetto come file di testo `.oracolo.txt` nei download; *Carica file* lo riapre, anche su un altro dispositivo (o trascina il file sulla pagina)
+- *Scarica tutti i progetti* crea un unico file di backup
+
 Il tavolo si salva da solo nel browser: chiudi la pagina e riprendi da dove eri.
 
 ## Comandi

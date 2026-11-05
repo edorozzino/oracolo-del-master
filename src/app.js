@@ -28,7 +28,212 @@
   function scrivi() {
     clearTimeout(salvaTimer);
     registraStoria();
-    try { localStorage.setItem(CHIAVE, JSON.stringify(stato)); } catch (e) { /* nessun salvataggio */ }
+    const json = JSON.stringify(stato);
+    try { localStorage.setItem(CHIAVE, json); } catch (e) { /* nessun salvataggio */ }
+    salvaNelProgetto(json);
+  }
+
+  // ---------------- progetti ----------------
+  // Indice dei progetti + un salvataggio per ognuno, tutto in questo browser.
+  const INDICE = "oracolo-progetti-v1", PREF = "oracolo-progetto-";
+  let indice = null;
+  function leggiIndice() {
+    try { const i = JSON.parse(localStorage.getItem(INDICE)); if (i && Array.isArray(i.voci)) return i; } catch (e) { /* vuoto */ }
+    return { attivo: null, voci: [] };
+  }
+  function scriviIndice() { try { localStorage.setItem(INDICE, JSON.stringify(indice)); return true; } catch (e) { return false; } }
+  const voce = (id) => indice && indice.voci.find((v) => v.id === id);
+  const nuovoId = () => "p" + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36);
+  function nomeProgetto() { const v = indice && voce(indice.attivo); return v ? v.nome : "Il mio tavolo"; }
+  let ultimaMiniatura = 0, avvisatoSpazio = false;
+  function salvaNelProgetto(json) {
+    if (!indice || !indice.attivo) return;
+    const v = voce(indice.attivo); if (!v) return;
+    let ok = true;
+    try { localStorage.setItem(PREF + v.id, json); } catch (e) { ok = false; }
+    v.aggiornato = Date.now();
+    if (Date.now() - ultimaMiniatura > 1500) { v.anteprima = miniatura(stato); ultimaMiniatura = Date.now(); }
+    ok = scriviIndice() && ok;
+    if (!ok && !avvisatoSpazio) { avvisatoSpazio = true; avviso("Spazio del browser pieno: scarica i progetti che non usi ed eliminali."); }
+    if (ui.tab === "progetti" && !document.activeElement.closest("#p-progetti")) renderProgetti();
+  }
+  // anteprima dall'alto, piccola: un pixel colorato per casella, ingrandito
+  function miniatura(st) {
+    const k = Math.max(1, Math.floor(96 / Math.max(st.cols, st.rows * 1.5)));
+    const c = document.createElement("canvas"); c.width = st.cols * k; c.height = st.rows * k;
+    const x = c.getContext("2d");
+    for (let i = 0; i < st.celle.length; i++) { x.fillStyle = (TERRENI[st.celle[i]] || TERRENI[0]).col; x.fillRect((i % st.cols) * k, Math.floor(i / st.cols) * k, k, k); }
+    for (const t of st.pedine) { x.fillStyle = t.tipo === "pg" ? "#f4d27a" : "#e0453a"; x.fillRect(t.x * k, t.y * k, k * t.taglia, k * t.taglia); }
+    try { return c.toDataURL("image/png"); } catch (e) { return ""; }
+  }
+  function inizializzaProgetti() {
+    indice = leggiIndice();
+    if (!indice.voci.length || !voce(indice.attivo)) {
+      const id = nuovoId();
+      indice.voci.unshift({ id, nome: (stato.scena && stato.scena.titolo) || "Il mio tavolo", creato: Date.now(), aggiornato: Date.now(), anteprima: miniatura(stato) });
+      indice.attivo = id;
+      scriviIndice();
+    }
+  }
+  function azzeraStoria() { storia.indietro = []; storia.avanti = []; storia.ultima = null; }
+  function caricaStato(nuovo) {
+    stato = nuovo;
+    if (!stato.lotta) stato.lotta = { attiva: false, round: 1, indice: 0, ordine: [] };
+    if (!Array.isArray(stato.registro)) stato.registro = [];
+    if (!stato.prossimoId) stato.prossimoId = stato.pedine.reduce((m, t) => Math.max(m, t.id), 0) + 1;
+    migra();
+    ui.selezionata = null; ui.modo = "muovi";
+    azzeraStoria();
+    $("snack").hidden = true; annullabile = null; clearTimeout(avviso.t); // un "Annulla" vecchio non deve toccare il nuovo progetto
+    if (stato.scena && AMBIENTI[stato.scena.ambiente]) { $("sel-ambiente").value = stato.scena.ambiente; $("sel-diff").value = stato.scena.diff; }
+    tavolo.terrenoCambiato(); tavolo.adatta();
+    aggiorna(); scrivi(); renderStoria();
+  }
+  function apriProgetto(id) {
+    scrivi();
+    let s = null;
+    try { s = JSON.parse(localStorage.getItem(PREF + id)); } catch (e) { s = null; }
+    if (!s || !Array.isArray(s.celle)) { toast("Non riesco ad aprire questo progetto."); return; }
+    indice.attivo = id; scriviIndice();
+    caricaStato(s);
+    toast("Aperto: " + voce(id).nome);
+  }
+  function aggiungiProgetto(nome, s) {
+    const id = nuovoId();
+    indice.voci.unshift({ id, nome, creato: Date.now(), aggiornato: Date.now(), anteprima: miniatura(s) });
+    try { localStorage.setItem(PREF + id, JSON.stringify(s)); } catch (e) { /* lo salva scrivi() */ }
+    indice.attivo = id; scriviIndice();
+    return id;
+  }
+  function eroiAttuali() {
+    return stato.pedine.filter((p) => p.tipo === "pg").map((t) => Object.assign({}, t, { pf: t.pfMax, condizioni: [], iniziativa: null }));
+  }
+  function creaProgetto() {
+    const nome = $("np-nome").value.trim() || "Progetto " + (indice.voci.length + 1);
+    const tipo = document.querySelector("[data-np][aria-pressed='true']").dataset.np;
+    const eroi = $("np-eroi").checked ? eroiAttuali() : [];
+    scrivi();
+    let s;
+    if (tipo === "generata") {
+      const ambiente = $("np-ambiente").value, diff = $("np-diff").value;
+      stato = { cols: 30, rows: 20, celle: [], pedine: eroi, registro: [], prossimoId: stato.prossimoId, scena: null, lotta: { attiva: false, round: 1, indice: 0, ordine: [] } };
+      generaScena(ambiente, diff);
+      s = stato;
+      if (!eroi.length) { /* generaScena ha messo gli eroi di partenza */ }
+    } else {
+      const [cols, rows] = $("np-dim").value.split("x").map(Number), terreno = +$("np-terreno").value;
+      s = { cols, rows, celle: new Array(cols * rows).fill(terreno), pedine: [], registro: [], prossimoId: stato.prossimoId,
+        scena: { titolo: nome }, lotta: { attiva: false, round: 1, indice: 0, ordine: [] } };
+      stato = s;
+      const occ = new Set();
+      eroi.forEach((t) => { posa(t, 1, rows >> 1, occ); s.pedine.push(t); });
+    }
+    if (s.scena && tipo === "vuota") s.scena.titolo = nome;
+    s.registro = [{ testo: "Nuovo progetto: " + nome + ".", tipo: "scena", ora: new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }) }];
+    aggiungiProgetto(nome, s);
+    $("np-nome").value = "";
+    caricaStato(s);
+    if (tipo === "vuota") { ui.modo = "stanza"; renderPalette(); }
+    toast("Progetto creato: " + nome);
+  }
+  function duplicaProgetto() {
+    scrivi();
+    const copia = JSON.parse(JSON.stringify(stato));
+    aggiungiProgetto(nomeProgetto() + " (copia)", copia);
+    caricaStato(copia);
+    toast("Copia creata.");
+  }
+  function eliminaProgetto(id) {
+    if (id === indice.attivo) return;
+    const v = voce(id);
+    indice.voci = indice.voci.filter((x) => x.id !== id);
+    try { localStorage.removeItem(PREF + id); } catch (e) { /* già via */ }
+    scriviIndice(); renderProgetti();
+    toast("Eliminato: " + (v ? v.nome : "progetto"));
+  }
+
+  // ----- file di testo da scaricare e ricaricare -----
+  const FORMATO = "oracolo-del-master";
+  function nomeFile(n) { return (n || "progetto").replace(/[\\/:*?"<>|]+/g, "").replace(/\s+/g, " ").trim().slice(0, 60) || "progetto"; }
+  function scaricaTesto(nome, testo) {
+    try {
+      const blob = new Blob([testo], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob), a = document.createElement("a");
+      a.href = url; a.download = nome; a.rel = "noopener";
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      toast("Scaricato: " + nome);
+    } catch (e) { toast("Questo browser non permette il download."); }
+  }
+  function scaricaProgetto() {
+    scrivi();
+    const dati = { formato: FORMATO, versione: 1, tipo: "progetto", salvato: new Date().toISOString(), nome: nomeProgetto(), stato };
+    scaricaTesto(nomeFile(nomeProgetto()) + ".oracolo.txt", JSON.stringify(dati));
+  }
+  function scaricaTutti() {
+    scrivi();
+    const progetti = indice.voci.map((v) => {
+      let s = null; try { s = JSON.parse(localStorage.getItem(PREF + v.id)); } catch (e) { s = null; }
+      return s ? { nome: v.nome, stato: s } : null;
+    }).filter(Boolean);
+    const data = new Date().toISOString().slice(0, 10);
+    scaricaTesto("Oracolo backup " + data + ".oracolo.txt", JSON.stringify({ formato: FORMATO, versione: 1, tipo: "backup", salvato: new Date().toISOString(), progetti }));
+  }
+  function valido(s) { return s && Number.isInteger(s.cols) && Number.isInteger(s.rows) && Array.isArray(s.celle) && s.celle.length === s.cols * s.rows && Array.isArray(s.pedine); }
+  function caricaFile(files) {
+    const lista = [...files]; if (!lista.length) return;
+    let aperto = null, caricati = 0, scartati = 0, letti = 0;
+    lista.forEach((f) => {
+      const r = new FileReader();
+      r.onload = () => {
+        try {
+          const d = JSON.parse(r.result);
+          const voci = d && d.formato === FORMATO && d.tipo === "backup" ? d.progetti
+            : d && d.formato === FORMATO ? [{ nome: d.nome, stato: d.stato }]
+            : valido(d) ? [{ nome: f.name.replace(/\.(oracolo\.)?(txt|json)$/i, ""), stato: d }] : [];
+          for (const p of voci) {
+            if (!valido(p.stato)) { scartati++; continue; }
+            const nome = (p.nome || f.name).slice(0, 40);
+            const usato = indice.voci.some((v) => v.nome === nome);
+            aperto = { nome: usato ? nome + " (caricato)" : nome, stato: p.stato }; caricati++;
+            aggiungiProgetto(aperto.nome, aperto.stato);
+          }
+          if (!voci.length) scartati++;
+        } catch (e) { scartati++; }
+        if (++letti === lista.length) fine();
+      };
+      r.onerror = () => { scartati++; if (++letti === lista.length) fine(); };
+      r.readAsText(f);
+    });
+    function fine() {
+      $("proj-import").value = "";
+      if (aperto) { caricaStato(aperto.stato); }
+      renderProgetti();
+      if (caricati) toast(caricati === 1 ? "Caricato: " + aperto.nome : caricati + " progetti caricati.");
+      if (scartati) avviso(scartati === 1 ? "Un file non è un progetto dell'Oracolo." : scartati + " file non sono progetti dell'Oracolo.");
+    }
+  }
+
+  function quando(t) {
+    if (!t) return "";
+    const d = new Date(t), oggi = new Date();
+    const ora = d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+    return d.toDateString() === oggi.toDateString() ? "oggi, " + ora : d.toLocaleDateString("it-IT", { day: "numeric", month: "short" }) + ", " + ora;
+  }
+  let eliminaArmato = null;
+  function renderProgetti() {
+    if (!indice) return;
+    const att = voce(indice.attivo);
+    $("proj-current").innerHTML = att ? `<img class="proj-thumb" src="${att.anteprima || ""}" alt="">
+      <label class="field"><span>Nome</span><input id="proj-nome" type="text" maxlength="40" value="${esc(att.nome)}">
+      <small>${stato.cols * 5} × ${stato.rows * 5} ft · ${stato.pedine.length} pedine · salvato ${esc(quando(att.aggiornato))}</small></label>` : "";
+    $("proj-list").innerHTML = indice.voci.map((v) => `
+      <li class="proj-item${v.id === indice.attivo ? " on" : ""}">
+        <img class="proj-thumb" src="${v.anteprima || ""}" alt="">
+        <span class="proj-info"><b>${esc(v.nome)}</b><small>${v.id === indice.attivo ? "aperto ora" : esc(quando(v.aggiornato))}</small></span>
+        <span class="proj-acts">${v.id === indice.attivo ? "" : `<button type="button" data-apri="${v.id}">Apri</button>
+          <button type="button" class="danger${eliminaArmato === v.id ? " armed" : ""}" data-elimina="${v.id}">${eliminaArmato === v.id ? "Conferma" : "Elimina"}</button>`}</span>
+      </li>`).join("") || `<li class="empty">Nessun progetto.</li>`;
   }
 
   // ---------------- annulla / ripeti ----------------
@@ -274,14 +479,13 @@
 
   function renderIntestazione() {
     const s = stato.scena;
-    $("scene-head").innerHTML = s ? `<span class="scene-kicker">${esc(AMBIENTI[s.ambiente].nome)} · ${esc(DIFF[s.diff].nome)}</span><span class="scene-title">${esc(s.titolo)}</span>` : "";
-    $("scene-card").innerHTML = s ? `
+    const kicker = s && AMBIENTI[s.ambiente] ? AMBIENTI[s.ambiente].nome + " · " + DIFF[s.diff].nome
+      : "Mappa libera · " + stato.cols * 5 + " × " + stato.rows * 5 + " ft";
+    $("scene-head").innerHTML = `<span class="scene-kicker">${esc(kicker)}</span><span class="scene-title">${esc((s && s.titolo) || nomeProgetto())}</span>`;
+    const voci = s ? [["Atmosfera", s.atmosfera], ["Chi c'è", s.png], ["Spunto", s.gancio]].filter((v) => v[1]) : [];
+    $("scene-card").innerHTML = voci.length ? `
       <h2>La scena</h2>
-      <dl class="scene-dl">
-        <div><dt>Atmosfera</dt><dd>${esc(s.atmosfera)}</dd></div>
-        <div><dt>Chi c'è</dt><dd>${esc(s.png)}</dd></div>
-        <div><dt>Spunto</dt><dd>${esc(s.gancio)}</dd></div>
-      </dl>` : "";
+      <dl class="scene-dl">${voci.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>` : "";
   }
 
   function renderBanner() {
@@ -435,10 +639,11 @@
   }
 
   function renderTabs() {
-    for (const k of ["scena", "pedine", "lotta", "dadi"]) {
+    for (const k of ["progetti", "scena", "pedine", "lotta", "dadi"]) {
       $("t-" + k).setAttribute("aria-selected", ui.tab === k);
       $("p-" + k).hidden = ui.tab !== k;
     }
+    if (ui.tab === "progetti") renderProgetti();
   }
 
   function aggiorna(opz = {}) {
@@ -595,7 +800,7 @@
   // ---------------- eventi ----------------
   $("sel-ambiente").innerHTML = Object.entries(AMBIENTI).map(([k, a]) => `<option value="${k}">${a.nome}</option>`).join("");
   $("sel-diff").innerHTML = Object.entries(DIFF).map(([k, d]) => `<option value="${k}">${d.nome}</option>`).join("");
-  if (stato.scena) { $("sel-ambiente").value = stato.scena.ambiente; $("sel-diff").value = stato.scena.diff; }
+  if (stato.scena && AMBIENTI[stato.scena.ambiente]) { $("sel-ambiente").value = stato.scena.ambiente; $("sel-diff").value = stato.scena.diff; }
   $("sel-mostro").innerHTML = Object.entries(B).map(([k, m]) => `<option value="${k}">${m.nome} · GS ${m.gs}</option>`).join("");
 
   $("btn-genera").addEventListener("click", () => { generaScena($("sel-ambiente").value, $("sel-diff").value); toast("Scena generata."); });
@@ -824,6 +1029,37 @@
     if (e.key === "n" && stato.lotta.attiva) passaTurno(1);
   });
 
+  // ---------- eventi progetti ----------
+  $("np-ambiente").innerHTML = $("sel-ambiente").innerHTML;
+  $("np-diff").innerHTML = $("sel-diff").innerHTML; $("np-diff").value = "media";
+  $("np-terreno").innerHTML = [ID.pietra, ID.erba, ID.legno, ID.sabbia].map((i) => `<option value="${i}">${esc(TERRENI[i].nome)}</option>`).join("");
+  document.querySelectorAll("[data-np]").forEach((b) => b.addEventListener("click", () => {
+    document.querySelectorAll("[data-np]").forEach((x) => x.setAttribute("aria-pressed", x === b));
+    $("np-generata").hidden = b.dataset.np !== "generata"; $("np-vuota").hidden = b.dataset.np !== "vuota";
+  }));
+  $("np-crea").addEventListener("click", creaProgetto);
+  $("proj-dup").addEventListener("click", duplicaProgetto);
+  $("proj-export").addEventListener("click", scaricaProgetto);
+  $("proj-backup").addEventListener("click", scaricaTutti);
+  $("proj-import").addEventListener("change", (e) => caricaFile(e.target.files));
+  $("proj-current").addEventListener("change", (e) => {
+    if (e.target.id !== "proj-nome") return;
+    const v = voce(indice.attivo); v.nome = e.target.value.trim() || v.nome; scriviIndice();
+    renderIntestazione(); renderProgetti();
+  });
+  $("proj-list").addEventListener("click", (e) => {
+    const a = e.target.closest("[data-apri]"), d = e.target.closest("[data-elimina]");
+    if (a) { eliminaArmato = null; apriProgetto(a.dataset.apri); }
+    else if (d) {
+      if (eliminaArmato === d.dataset.elimina) { eliminaArmato = null; eliminaProgetto(d.dataset.elimina); }
+      else { eliminaArmato = d.dataset.elimina; renderProgetti(); setTimeout(() => { if (eliminaArmato) { eliminaArmato = null; renderProgetti(); } }, 4000); }
+    }
+  });
+  // trascinare un file sulla pagina lo carica
+  document.addEventListener("dragover", (e) => { if (e.dataTransfer && [...e.dataTransfer.types].includes("Files")) e.preventDefault(); });
+  document.addEventListener("drop", (e) => { if (e.dataTransfer && e.dataTransfer.files.length) { e.preventDefault(); caricaFile(e.dataTransfer.files); } });
+
+  inizializzaProgetti();
   aggiorna();
   scrivi();
   renderStoria();
