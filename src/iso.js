@@ -326,32 +326,10 @@
       ctx.moveTo(cx - u * .15, y0 - u * .35); ctx.lineTo(cx + u * .05, y0 - u * .15); ctx.moveTo(cx + u * .05, y0 - u * .35); ctx.lineTo(cx - u * .15, y0 - u * .15); ctx.stroke();
       ctx.restore(); return;
     }
-    // corpo a pedone, illuminato da sinistra
-    const gr = ctx.createLinearGradient(cx - u * .3, 0, cx + u * .3, 0);
-    gr.addColorStop(0, shade(col, .35)); gr.addColorStop(.45, col); gr.addColorStop(1, shade(col, -.45));
-    ctx.fillStyle = gr; ctx.strokeStyle = "rgba(0,0,0,.55)"; ctx.lineWidth = 1;
-    sagoma(ctx, cx, y0, u); ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.ellipse(cx, y0 - .52 * u, .19 * u, .065 * u, 0, 0, 7); ctx.fill(); ctx.stroke();
-    const hy = y0 - .73 * u, hr = .17 * u;
-    const gh = ctx.createRadialGradient(cx - hr * .4, hy - hr * .4, hr * .1, cx, hy, hr);
-    gh.addColorStop(0, shade(col, .5)); gh.addColorStop(.7, col); gh.addColorStop(1, shade(col, -.4));
-    ctx.fillStyle = gh; ctx.beginPath(); ctx.arc(cx, hy, hr, 0, 7); ctx.fill(); ctx.stroke();
-    if (t.tipo !== "pg") { // corna: i mostri si riconoscono al volo
-      ctx.fillStyle = "#efe4cc"; ctx.strokeStyle = "rgba(0,0,0,.6)";
-      for (const d of [-1, 1]) {
-        ctx.beginPath(); ctx.moveTo(cx + d * hr * .5, hy - hr * .6); ctx.quadraticCurveTo(cx + d * hr * 1.4, hy - hr * 1.1, cx + d * hr * 1.2, hy - hr * 2); ctx.lineTo(cx + d * hr * .9, hy - hr * .7); ctx.closePath(); ctx.fill(); ctx.stroke();
-      }
-    }
-    // sigla sul corpo
-    if (u >= 16) {
-      const lab = window.Tavolo.iniziali(t.nome);
-      ctx.font = "700 " + Math.round(u * (lab.length > 2 ? .17 : .21)) + "px 'Alegreya Sans SC', 'Trebuchet MS', sans-serif";
-      ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.lineWidth = Math.max(2, u * .05); ctx.strokeStyle = "rgba(0,0,0,.7)"; ctx.strokeText(lab, cx, y0 - .22 * u);
-      ctx.fillStyle = "#fff"; ctx.fillText(lab, cx, y0 - .22 * u);
-    }
+    // figura: razza e classe per i giocatori, aspetto proprio per ogni mostro
+    const cima = window.Figure.disegna(ctx, t, cx, y0, u);
     // barra dei PF sopra la testa
-    const top = hy - hr - (t.tipo !== "pg" ? hr * 1.1 : 0) - 6;
+    const top = cima - 6;
     const bw = Math.max(22, u * .7), bhh = Math.max(4, u * .08), f = Math.max(0, Math.min(1, t.pf / t.pfMax));
     ctx.fillStyle = "rgba(0,0,0,.75)"; ctx.fillRect(cx - bw / 2 - 1, top - bhh - 1, bw + 2, bhh + 2);
     ctx.fillStyle = "#b8281c"; ctx.fillRect(cx - bw / 2, top - bhh, bw, bhh);
@@ -377,10 +355,8 @@
 
   function silhouette(ctx, t, b) { // vista "a raggi X" per chi è dietro un muro
     if (t.pf <= 0) return;
-    const { x: cx, y: cy, u } = b, y0 = cy - u * .09;
-    ctx.save(); ctx.globalAlpha = .3; ctx.fillStyle = t.colore;
-    sagoma(ctx, cx, y0, u); ctx.fill();
-    ctx.beginPath(); ctx.arc(cx, y0 - .73 * u, .17 * u, 0, 7); ctx.fill();
+    ctx.save(); ctx.globalAlpha = .28;
+    window.Figure.disegna(ctx, t, b.x, b.y - b.u * .09, b.u);
     ctx.restore();
   }
 

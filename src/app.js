@@ -62,8 +62,20 @@
   }
   function creaPG(i) {
     const base = window.PG_BASE[i % window.PG_BASE.length];
-    const nome = stato.pedine.some((p) => p.nome === base.nome) ? nomeUnico("Eroe") : base.nome;
-    return nuovaPedina({ tipo: "pg", nome, colore: COLORI_PG[i % COLORI_PG.length], pf: base.pf, pfMax: base.pf, ca: base.ca, init: base.init, vel: base.vel });
+    const nuovo = i >= window.PG_BASE.length || stato.pedine.some((p) => p.nome === base.nome);
+    const razze = Object.keys(window.Figure.RAZZE), classi = Object.keys(window.Figure.CLASSI);
+    const stirpe = nuovo ? razze[Math.floor(Math.random() * razze.length)] : base.stirpe;
+    const classe = nuovo ? classi[Math.floor(Math.random() * classi.length)] : base.classe;
+    const nome = nuovo ? nomeUnico("Eroe") : base.nome;
+    return nuovaPedina({ tipo: "pg", nome, stirpe, classe, colore: COLORI_PG[i % COLORI_PG.length], pf: base.pf, pfMax: base.pf, ca: base.ca, init: base.init, vel: stirpe === "nano" || stirpe === "halfling" || stirpe === "gnomo" ? 25 : 30 });
+  }
+  // tavoli salvati prima delle razze: dai a tutti un aspetto
+  const VECCHI = { Guerriera: ["nano", "guerriero"], Mago: ["elfo", "mago"], Ladra: ["halfling", "ladro"], Chierico: ["umano", "chierico"] };
+  function migra() {
+    for (const t of stato.pedine) {
+      if (t.tipo === "pg" && !t.stirpe) { const v = VECCHI[t.nome] || ["umano", "guerriero"]; t.stirpe = v[0]; t.classe = v[1]; }
+      if (t.tipo !== "pg" && !t.razza) t.razza = "generico";
+    }
   }
   const trova = (id) => stato.pedine.find((p) => p.id === id);
 
@@ -214,7 +226,7 @@
     h.hidden = !t;
     if (!t) return;
     h.innerHTML = `
-      <div class="hud-head"><span class="dot" style="background:${esc(t.colore)}"></span><b>${esc(t.nome)}</b>
+      <div class="hud-head"><canvas class="ritratto big" data-rit="${t.id}"></canvas><span class="hud-who"><b>${esc(t.nome)}</b><small>${esc(descrivi(t))}</small></span>
         <button type="button" class="x" data-hud="chiudi" aria-label="Chiudi">×</button></div>
       <div class="hud-stats">${barraPF(t)}<span class="num">${t.pf}/${t.pfMax} PF</span><span class="num">CA ${t.ca}</span><span class="num">${t.vel} ft</span></div>
       ${t.condizioni.length ? `<div class="chips small">${t.condizioni.map((c) => `<span class="chip on">${esc(c)}</span>`).join("")}</div>` : ""}
@@ -240,8 +252,8 @@
     const pg = stato.pedine.filter((t) => t.tipo === "pg"), mo = stato.pedine.filter((t) => t.tipo !== "pg");
     const riga = (t) => `
       <li><button type="button" class="token-row${t.id === ui.selezionata ? " sel" : ""}${t.pf <= 0 ? " down" : ""}" data-sel="${t.id}">
-        <span class="dot" style="background:${esc(t.colore)}"></span>
-        <span class="tname">${esc(t.nome)}</span>
+        <canvas class="ritratto" data-rit="${t.id}"></canvas>
+        <span class="tname">${esc(t.nome)}<small>${esc(descrivi(t))}</small></span>
         ${barraPF(t)}<span class="num">${t.pf}/${t.pfMax}</span><span class="num muted">CA ${t.ca}</span>
       </button></li>`;
     $("token-list").innerHTML =
@@ -250,13 +262,36 @@
       `<li class="empty">Il tavolo è vuoto. Aggiungi un giocatore o un mostro.</li>`;
   }
 
+  function opzioni(tab, val) {
+    return Object.entries(tab).map(([k, v]) => `<option value="${k}"${k === val ? " selected" : ""}>${esc(v.nome)}</option>`).join("");
+  }
+  function descrivi(t) {
+    const F = window.Figure;
+    if (t.tipo === "pg") return [F.RAZZE[t.stirpe], F.CLASSI[t.classe]].filter(Boolean).map((x) => x.nome.toLowerCase()).join(" · ");
+    const m = F.MOSTRI[t.razza]; return m ? m.nome.toLowerCase() + (t.gs ? " · GS " + t.gs : "") : "";
+  }
+  function disegnaRitratti(root = document) {
+    root.querySelectorAll("canvas[data-rit]").forEach((c) => { const t = trova(+c.dataset.rit); if (t) window.Figure.ritratto(c, t); });
+  }
   function renderEditor() {
     const t = trova(ui.selezionata), el = $("editor");
     if (!t) { el.innerHTML = `<h2>Scheda</h2><p class="note">Tocca una pedina sulla mappa o nella lista per modificarla.</p>`; return; }
     const colori = t.tipo === "pg" ? COLORI_PG : COLORI_MOSTRI;
     el.innerHTML = `
-      <h2>Scheda</h2>
-      <label class="field"><span>Nome</span><input id="ed-nome" type="text" value="${esc(t.nome)}" maxlength="28"></label>
+      <div class="sheet-head">
+        <canvas class="ritratto preview" data-rit="${t.id}"></canvas>
+        <div class="sheet-id">
+          <h2>Scheda</h2>
+          <label class="field"><span>Nome</span><input id="ed-nome" type="text" value="${esc(t.nome)}" maxlength="28"></label>
+          <button type="button" class="btn-ghost small" id="ed-var">Cambia aspetto</button>
+        </div>
+      </div>
+      ${t.tipo === "pg" ? `
+      <div class="field-row">
+        <label class="field"><span>Razza</span><select id="ed-stirpe">${opzioni(window.Figure.RAZZE, t.stirpe)}</select></label>
+        <label class="field"><span>Classe</span><select id="ed-classe">${opzioni(window.Figure.CLASSI, t.classe)}</select></label>
+      </div>` : `
+      <label class="field"><span>Aspetto</span><select id="ed-razza">${opzioni(window.Figure.MOSTRI, t.razza)}</select></label>`}
       <div class="field-row four">
         <label class="field"><span>PF</span><input id="ed-pf" type="number" value="${t.pf}" inputmode="numeric"></label>
         <label class="field"><span>PF max</span><input id="ed-pfMax" type="number" min="1" value="${t.pfMax}" inputmode="numeric"></label>
@@ -306,7 +341,7 @@
         const t = trova(id); if (!t) return "";
         return `<li class="init-row${id === corrente ? " now" : ""}${t.pf <= 0 ? " down" : ""}">
           <input class="init-val" type="number" id="ini-${id}" data-ini="${id}" value="${t.iniziativa ?? ""}" aria-label="Iniziativa di ${esc(t.nome)}" inputmode="numeric">
-          <button type="button" class="init-name" data-sel="${id}"><span class="dot" style="background:${esc(t.colore)}"></span>${esc(t.nome)}</button>
+          <button type="button" class="init-name" data-sel="${id}"><canvas class="ritratto" data-rit="${id}"></canvas>${esc(t.nome)}</button>
           <span class="init-hp">${barraPF(t)}<span class="num">${t.pf}/${t.pfMax}</span></span>
           <span class="init-act">
             <input type="number" min="1" id="amt-${id}" data-amt="${id}" placeholder="0" aria-label="Quantità" inputmode="numeric">
@@ -340,6 +375,7 @@
     renderIntestazione(); renderBanner(); renderHud(); renderPalette(); renderLista();
     if (!opz.tieniEditor) renderEditor();
     renderLotta(); renderLog(); renderTabs();
+    disegnaRitratti();
     tavolo && tavolo.disegna();
     salva();
   }
@@ -348,6 +384,7 @@
   let tavolo = null;
   if (!stato) { stato = null; generaScena("dungeon", "media"); }
   if (!stato.lotta) stato.lotta = { attiva: false, round: 1, indice: 0, ordine: [] };
+  migra();
   tavolo = window.Tavolo.crea($("board"), {
     stato: () => stato,
     selezionata: () => ui.selezionata,
@@ -424,6 +461,7 @@
   $("editor").addEventListener("input", (e) => {
     const t = trova(ui.selezionata); if (!t) return;
     const f = e.target.id.replace("ed-", "");
+    if (f === "stirpe" || f === "classe" || f === "razza") { t[f] = e.target.value; aggiorna(); return; }
     if (f === "nome") t.nome = e.target.value || "Senza nome";
     else if (["pf", "pfMax", "ca", "init", "vel"].includes(f)) {
       const v = parseInt(e.target.value, 10); if (Number.isNaN(v)) return;
@@ -438,7 +476,12 @@
   $("editor").addEventListener("click", (e) => {
     const t = trova(ui.selezionata); if (!t) return;
     const b = e.target.closest("button"); if (!b) return;
-    if (b.dataset.tipo) { t.tipo = b.dataset.tipo; t.colore = (t.tipo === "pg" ? COLORI_PG : COLORI_MOSTRI)[0]; }
+    if (b.dataset.tipo) {
+      t.tipo = b.dataset.tipo; t.colore = (t.tipo === "pg" ? COLORI_PG : COLORI_MOSTRI)[0];
+      if (t.tipo === "pg" && !t.stirpe) { t.stirpe = "umano"; t.classe = "guerriero"; }
+      if (t.tipo !== "pg" && !t.razza) t.razza = "generico";
+    }
+    else if (b.id === "ed-var") t.variante = (t.variante || 0) + 1;
     else if (b.dataset.colore) t.colore = b.dataset.colore;
     else if (b.dataset.cond) {
       const c = b.dataset.cond, i = t.condizioni.indexOf(c);

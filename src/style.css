@@ -95,7 +95,7 @@ h1 { font-family: var(--f-display); font-weight: 400; margin: 0; font-size: clam
   box-shadow: 0 8px 24px rgba(0,0,0,.5); display: grid; gap: 8px;
 }
 .hud-head { display: flex; align-items: center; gap: 8px; font-family: var(--f-display); font-size: 19px; }
-.hud-head b { font-weight: 400; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+
 .hud .x { background: none; border: 0; font-size: 22px; line-height: 1; padding: 0 4px; color: var(--ink); }
 .hud-stats { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
 .hud-btns { display: grid; grid-template-columns: repeat(4, 1fr) 1.6fr; gap: 6px; }
@@ -235,6 +235,19 @@ h1 { font-family: var(--f-display); font-weight: 400; margin: 0; font-size: clam
 }
 .die-btn:hover { background: var(--brass); color: var(--felt-deep); }
 .die-btn:active { transform: scale(.94); }
+
+/* ritratti */
+.ritratto { width: 28px; height: 34px; flex: none; display: block; }
+.ritratto.big { width: 40px; height: 48px; }
+.ritratto.preview { width: 88px; height: 104px; background: radial-gradient(ellipse at 50% 70%, #2a4a40, var(--felt-deep) 70%); border: 1px solid var(--line); border-radius: 8px; }
+.tname small, .hud-who small { display: block; font-family: var(--f-label); font-size: 12px; color: var(--muted); letter-spacing: .03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hud-who { flex: 1; min-width: 0; display: grid; }
+.hud-who b { font-weight: 400; overflow-wrap: anywhere; }
+.hud .hud-who small { color: #6a5a48; }
+.sheet-head { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: start; }
+.sheet-id { display: grid; gap: 8px; min-width: 0; }
+.btn-ghost.small { font-size: 13px; padding: 4px 10px; justify-self: start; }
+.init-name .ritratto { margin: -4px 0; }
 
 @media (max-width: 520px) {
   .scene-head { text-align: left; }

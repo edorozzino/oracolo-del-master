@@ -35,10 +35,10 @@ window.DIFFICOLTA = {
 };
 
 window.PG_BASE = [
-  { nome: "Guerriera", pf: 28, ca: 18, init: 1, vel: 30, colore: "#3f7fbf" },
-  { nome: "Mago",      pf: 16, ca: 12, init: 3, vel: 30, colore: "#8a5cc2" },
-  { nome: "Ladra",     pf: 22, ca: 14, init: 4, vel: 30, colore: "#2e9c8f" },
-  { nome: "Chierico",  pf: 24, ca: 16, init: 0, vel: 25, colore: "#c79a2e" }
+  { nome: "Thora",   stirpe: "nano",     classe: "guerriero", pf: 28, ca: 18, init: 1, vel: 25, colore: "#3f7fbf" },
+  { nome: "Elandor", stirpe: "elfo",     classe: "mago",      pf: 16, ca: 12, init: 3, vel: 30, colore: "#8a5cc2" },
+  { nome: "Pip",     stirpe: "halfling", classe: "ladro",     pf: 22, ca: 14, init: 4, vel: 25, colore: "#2e9c8f" },
+  { nome: "Aldric",  stirpe: "umano",    classe: "chierico",  pf: 24, ca: 16, init: 0, vel: 30, colore: "#c79a2e" }
 ];
 
 window.CONDIZIONI = ["Prono", "Avvelenato", "Spaventato", "Stordito", "Afferrato",

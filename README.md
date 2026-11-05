@@ -8,6 +8,14 @@ Tavolo virtuale per chi fa da Master a Dungeons & Dragons 5e. Genera la scena, m
 
 **Vista 3D in stile strategico**: la mappa è un plastico isometrico con muri merlati, alberi, rocce, botti e tavoli in rilievo. Le pedine sono figure in piedi con la barra dei PF sopra la testa; i mostri hanno le corna. Chi finisce dietro un muro resta visibile in trasparenza. Il pulsante *Pianta* passa alla classica vista dall'alto.
 
+**Personaggi e mostri riconoscibili**
+- 10 razze (umano, elfo, nano, halfling, gnomo, tiefling, dragonide, mezzorco, aasimar, goliath) con tratti propri: orecchie a punta, barbe, corna e coda, muso squamoso, zanne, aureola
+- 12 classi con equipaggiamento disegnato: elmo e scudo, cappello da mago e bastone, cappuccio e pugnali, arco e faretra, liuto, simbolo sacro…
+- Ogni mostro del bestiario ha la sua figura: goblin, scheletro, lupo, stirge, orsogufo, mimic, giovane drago verde e gli altri
+- Il colore scelto per la pedina tinge basetta, scudo, mantello e dettagli; "Cambia aspetto" varia pelle e capelli
+
+![Figure](docs/figure.png)
+
 **Scene e ambientazioni**
 - 5 ambientazioni generate a caso: Dungeon, Caverna, Foresta, Taverna, Rovine
 - 4 difficoltà (Facile, Media, Difficile, Mortale) che decidono quanti mostri e se c'è un capo
@@ -73,7 +81,8 @@ Poi su GitHub: *Settings → Pages → Deploy from branch → main / root*.
 index.html          pagina e pannelli
 src/mapgen.js       terreni e generatori di mappe
 src/board.js        mappa su canvas: pan/zoom, trascinamento, pennello, vista dall'alto
-src/iso.js          vista 3D isometrica: terreno, oggetti in rilievo, figure
+src/iso.js          vista 3D isometrica: terreno, oggetti in rilievo
+src/figure.js       figure di razze, classi e mostri, ritratti
 src/app.js          stato del tavolo, pedine, combattimento, dadi, salvataggio
 src/bestiario.js    mostri, abitanti per ambientazione, difficoltà, dadi
 src/data.js         tabelle per nomi, atmosfere, PNG, spunti
@@ -84,7 +93,8 @@ scripts/build.mjs   versione a file singolo
 
 ## Aggiungere contenuti
 
-- **Un mostro**: aggiungi una voce a `BESTIARIO` in `src/bestiario.js`, e il suo nome in `ABITANTI` se vuoi che compaia nelle scene generate.
+- **Un mostro**: aggiungi una voce a `BESTIARIO` in `src/bestiario.js`, il suo aspetto in `MOSTRI` dentro `src/figure.js` (parametri di un umanoide o un disegno dedicato), e il suo nome in `ABITANTI` se vuoi che compaia nelle scene generate.
+- **Una razza o una classe**: aggiungi una voce a `RAZZE` o `CLASSI` in `src/figure.js`.
 - **Un terreno**: aggiungi un elemento a `TERRENI` in `src/mapgen.js` e, se vuoi un disegno speciale, un `case` in `disegnaCasella` (`src/board.js`, vista dall'alto) e in `disegnaOggetto` (`src/iso.js`, vista 3D).
 - **Un'ambientazione**: scrivi una funzione generatrice in `src/mapgen.js`, registrala in `GENERATORI` e `AMBIENTI`, e dai i suoi abitanti in `ABITANTI`.
 
