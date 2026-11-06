@@ -87,13 +87,20 @@
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       if (!adattata) adatta(); else disegna();
     }
-    function adatta() {
+    // Vista "comoda": se la mappa intera rende le figure troppo piccole per un dito,
+    // ingrandisce e centra tra gli eroi e il centro. "Intera": tutta la mappa.
+    let interaUltima = false;
+    const tocco = () => matchMedia("(pointer: coarse)").matches || w < 640;
+    function adattaAlterna() { adatta(!interaUltima); return interaUltima; }
+    function adatta(intera) {
+      intera = intera === true; interaUltima = intera;
       const st = api.stato();
       if (api.vista() === "iso") {
         const { W, H } = dimVista(st);
         Object.assign(view, window.Iso.adatta(w, h, { cols: W, rows: H }));
-        if (w < 640 && view.s < 20) { // telefono: figure leggibili, centrate sui giocatori
-          view.s = 20;
+        const minimo = !tocco() ? 0 : w < 640 ? 22 : 28;
+        if (!intera && view.s < minimo) {
+          view.s = minimo;
           const pg = st.pedine.filter((p) => p.tipo === "pg");
           const cx = pg.length ? pg.reduce((a, p) => a + p.x, 0) / pg.length + .5 : st.cols / 2;
           const cy = pg.length ? pg.reduce((a, p) => a + p.y, 0) / pg.length + .5 : st.rows / 2;
@@ -104,8 +111,8 @@
       }
       view.s = Math.min(w / st.cols, h / st.rows);
       view.ox = (w - st.cols * view.s) / 2; view.oy = (h - st.rows * view.s) / 2;
-      if (view.s < 22) { // telefono: casella leggibile, centrata sui giocatori
-        view.s = Math.min(22, h / Math.min(st.rows, 14));
+      if (!intera && view.s < (tocco() ? 30 : 22)) { // telefono: casella leggibile, centrata sui giocatori
+        view.s = Math.min(tocco() ? 30 : 22, h / Math.min(st.rows, 14));
         const pg = st.pedine.filter((p) => p.tipo === "pg");
         const cx = pg.length ? pg.reduce((a, p) => a + p.x, 0) / pg.length + .5 : st.cols / 2;
         const cy = pg.length ? pg.reduce((a, p) => a + p.y, 0) / pg.length + .5 : st.rows / 2;
@@ -313,11 +320,14 @@
     function pedinaIn(p) {
       const st = api.stato();
       if (api.vista() === "iso") { const v = window.Iso.pedinaIn(p.px, p.py, statoVista(st), view); return v ? st.pedine.find((t) => t.id === v.id) : null; }
-      for (let i = st.pedine.length - 1; i >= 0; i--) {
-        const t = st.pedine[i];
+      // la più vicina al dito, con un'area di tocco di almeno 22 px
+      let best = null, bd = Infinity;
+      for (const t of st.pedine) {
         const cx = view.ox + (t.x + t.taglia / 2) * view.s, cy = view.oy + (t.y + t.taglia / 2) * view.s;
-        if (Math.hypot(p.px - cx, p.py - cy) <= t.taglia * view.s * 0.5) return t;
+        const d = Math.hypot(p.px - cx, p.py - cy);
+        if (d <= Math.max(t.taglia * view.s * 0.5, 22) && d < bd) { best = t; bd = d; }
       }
+      return best;
       return null;
     }
     // Pennello e gomma: agiscono su un quadrato di 1, 2 o 3 caselle attorno al dito.
@@ -444,7 +454,7 @@
     return {
       disegna,
       terrenoCambiato() { cacheSporca = true; isoSporca = true; disegna(); },
-      adatta, zoom, ruota,
+      adatta: () => adatta(false), adattaAlterna, zoom, ruota,
       rotazione: () => rot
     };
   }

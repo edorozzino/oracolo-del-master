@@ -39,6 +39,12 @@ Tavolo virtuale per chi fa da Master a Dungeons & Dragons 5e. Genera la scena, m
 - Vantaggio e svantaggio per il d20, segnala 20 e 1 naturali
 - Formule libere tipo `2d6+3`
 
+**Telefono e tablet**
+- Su telefono il pannello sale dal basso (☰ Pannello) e lascia la mappa visibile sopra; in orizzontale si apre di lato
+- Comandi della mappa (rotazione, vista, schermo intero) sopra la mappa, pulsanti da almeno 44 px
+- Toccando una pedina: *Danno / Cura…* apre un tastierino con numeri grandi
+- Pedine facili da prendere col dito anche quando sono piccole
+
 **Schermo intero**
 - Il pulsante *Schermo intero* lascia solo la mappa, con il pannello che si apre di lato
 - Tutti gli strumenti (Dipingi, Gomma, Stanza, Aggiungi) hanno i loro comandi in un vassoio sopra la mappa: si costruisce la scena senza uscire, comodo su tablet
@@ -60,7 +66,7 @@ Il tavolo si salva da solo nel browser: chiudi la pagina e riprendi da dove eri.
 | Annullare / ripetere | ↶ e ↷ nella barra o in cima al pannello, oppure Ctrl+Z / Ctrl+Maiusc+Z |
 | Muovere una pedina | trascinala |
 | Spostare la mappa | trascina uno spazio vuoto |
-| Zoom | rotella, due dita, o i pulsanti − / + |
+| Zoom | rotella, due dita, o i pulsanti − / + sulla mappa; ⤢ alterna vista comoda e mappa intera |
 | Ruotare la mappa 3D | ⟲ ⟳ nella barra, tasti Q / E, o ruota due dita sul tablet; la bussola mostra il nord |
 | Dipingere il terreno | scegli un terreno in *Scena → Pennello* e trascina sulla mappa |
 | Disegnare una stanza | *Stanza*, scegli il pavimento e trascina da un angolo all'altro: muri, pavimento e porta |

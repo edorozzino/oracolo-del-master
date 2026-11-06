@@ -392,3 +392,157 @@ body.gioco .btn-main.small { font-size: 14px; padding: 4px 10px; white-space: no
 .file-btn { position: relative; overflow: hidden; display: inline-flex; align-items: center; cursor: pointer; }
 .file-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 .tabs button { padding-inline: 2px; }
+
+/* =====================================================================
+   Telefono e tablet
+   ===================================================================== */
+
+/* comandi della mappa: in alto a destra, sopra la mappa */
+.map-ctrls {
+  position: absolute; z-index: 3; top: 8px; right: 8px; display: flex; gap: 6px; align-items: center;
+  pointer-events: none;
+}
+.map-ctrls .mc {
+  pointer-events: auto; display: flex; align-items: stretch; overflow: hidden;
+  background: rgba(10,22,19,.86); border: 1px solid var(--line); border-radius: 10px;
+  box-shadow: 0 4px 14px rgba(0,0,0,.4); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+}
+.map-ctrls button {
+  min-width: 40px; height: 40px; padding: 0 8px; border: 0; background: transparent; color: var(--on-felt);
+  font-size: 19px; line-height: 1;
+}
+.map-ctrls button + button, .map-ctrls .rot-bussola + button { border-left: 1px solid var(--line); }
+.map-ctrls button:hover { background: var(--felt-2); }
+.map-ctrls .fs-btn { color: var(--brass-hi); }
+.map-ctrls .fs-btn[aria-pressed="true"] { background: var(--brass); color: var(--felt-deep); }
+.map-ctrls .rot-bussola { border-left: 1px solid var(--line); border-right: 0; width: 36px; }
+.toast { top: 58px; }
+.snack { top: 58px; }
+
+/* il pulsante Pannello serve dove il pannello non sta accanto alla mappa */
+.pan-toggle { display: none; }
+body.gioco .pan-toggle { display: inline-flex; }
+
+/* maniglia del pannello a scomparsa */
+.panel-close { display: none; }
+.panel-close .grip { display: block; width: 44px; height: 5px; border-radius: 3px; background: var(--muted); margin: 0 auto 6px; opacity: .7; }
+body.gioco.pannello .panel-close { display: block; }
+
+/* tastierino danni e cure */
+.hud-btns .pf { background: var(--blood); color: #fff8ea; border-color: var(--blood); }
+.keypad { display: grid; gap: 8px; }
+.kp-display { display: flex; align-items: baseline; gap: 6px; border-bottom: 1px solid rgba(36,28,20,.2); padding-bottom: 4px; }
+.kp-num { font-family: var(--f-display); font-size: 34px; line-height: 1; font-variant-numeric: tabular-nums; }
+.kp-unit { font-family: var(--f-label); font-size: 13px; color: #6a5a48; flex: 1; }
+.kp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.kp-grid button, .kp-acts button {
+  min-height: 46px; border-radius: 8px; border: 1px solid rgba(36,28,20,.3); background: rgba(255,255,255,.55);
+  font-family: var(--f-label); font-weight: 700; font-size: 20px; color: var(--ink);
+}
+.kp-grid button:active, .kp-acts button:active { transform: scale(.96); }
+.kp-acts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.kp-acts .kp-danno { background: var(--blood); border-color: var(--blood); color: #fff8ea; }
+.kp-acts .kp-cura { background: #3f7a3a; border-color: #3f7a3a; color: #f2ffe8; }
+
+/* ---------- dita: misure minime ---------- */
+@media (pointer: coarse) {
+  .fine-only { display: none; }
+  .seg-btn { min-height: 44px; }
+  .btn-ghost, .btn-main { min-height: 44px; }
+  .map-ctrls button { min-width: 46px; height: 46px; }
+  .tabs button { min-height: 50px; }
+  .hud-btns button { min-height: 44px; }
+  .hud .x { min-width: 40px; min-height: 40px; }
+  .token-row { min-height: 50px; }
+  .init-row { padding-block: 10px; }
+  .init-act input, .init-act button, .init-val { min-height: 40px; }
+  .init-act button { padding-inline: 14px; }
+  .chip { min-height: 36px; padding-inline: 12px; }
+  .color { width: 38px; height: 38px; }
+  .swatch, .v-sw { min-height: 46px; }
+  .proj-acts button { min-height: 42px; padding-inline: 14px; }
+  /* sotto i 16 px iOS ingrandisce la pagina quando si tocca un campo */
+  input, select, textarea { font-size: 16px !important; }
+  .field input, .field select { min-height: 44px; }
+}
+
+/* ---------- telefono (e telefono in orizzontale): pannello dal basso ---------- */
+@media (max-width: 720px), (max-height: 540px) and (orientation: landscape) {
+  .pan-toggle { display: inline-flex; }
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .panel, body.gioco .panel { display: none; }
+  body.pannello .panel, body.gioco.pannello .panel {
+    display: block; position: fixed; z-index: 45; left: 0; right: 0; bottom: 0; top: auto; width: auto;
+    height: min(64svh, 640px); max-height: none; overflow: auto; overscroll-behavior: contain;
+    border-radius: 16px 16px 0 0; border-bottom: 0; box-shadow: 0 -12px 34px rgba(0,0,0,.6);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px);
+    animation: sale .22s ease-out;
+  }
+  body.pannello .panel-close { display: block; position: sticky; top: 0; z-index: 3; padding: 8px 12px 8px; font-size: 14px; }
+  body.pannello .tabs { top: 50px; }
+  @keyframes sale { from { transform: translateY(30px); opacity: .4; } }
+
+  /* intestazione più bassa: la mappa arriva prima */
+  .app { gap: 10px; padding-block: 8px 16px; }
+  .eyebrow { display: none; }
+  h1 { font-size: 24px; }
+  header.top { flex-wrap: nowrap; align-items: baseline; gap: 10px; }
+  .scene-head { text-align: right; }
+  .scene-kicker { display: none; }
+  .scene-title { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* barra: strumenti a tutta larghezza, il resto sotto */
+  .toolbar { gap: 6px; }
+  .tb-tools { width: 100%; }
+  .tb-tools .seg-btn { flex: 1 1 0; padding-inline: 2px; font-size: 14px; min-width: 0; }
+  .toolbar .seg-btn { padding-inline: 10px; }
+
+  .turn-banner { flex-wrap: nowrap; padding: 4px 6px 4px 10px; gap: 8px; }
+  .turn-text { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .turn-text b { font-size: 17px; }
+  .turn-text .muted, .turn-text .round { display: none; }
+  .btn-main.small { white-space: nowrap; }
+
+  .board-wrap { height: max(360px, calc(100svh - 210px)); }
+  .hint { display: none; }
+
+  /* scheda rapida a tutta larghezza in basso */
+  .hud { left: 8px; right: 8px; max-width: none; }
+  .vassoio { left: 6px; right: 6px; bottom: 6px; }
+}
+
+/* ---------- telefono in orizzontale: strumenti di lato ---------- */
+@media (max-height: 540px) and (orientation: landscape) {
+  header.top { display: none; }
+  .toolbar { flex-wrap: nowrap; }
+  .tb-tools { width: auto; flex: 1 1 auto; }
+  .board-wrap { height: max(250px, calc(100svh - 110px)); }
+  body.gioco .board-wrap { height: auto; }
+  .vassoio {
+    left: auto; top: 6px; right: 6px; bottom: 6px; width: min(300px, 42%); max-height: none; align-content: start;
+  }
+  .v-grid { grid-auto-flow: row; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-columns: auto; overflow: visible; }
+  .v-swatches { flex-wrap: wrap; overflow: visible; }
+  .v-row .v-hint { display: none; }
+  .map-ctrls { right: auto; left: 8px; }
+  .hud { right: auto; width: min(340px, 50%); top: 56px; bottom: auto !important; max-height: calc(100% - 64px); overflow: auto; }
+  body.pannello .panel, body.gioco.pannello .panel {
+    left: auto; top: 0; width: min(400px, 52vw); height: auto; border-radius: 16px 0 0 16px; animation: none;
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+}
+
+/* ---------- tablet in verticale: mappa più alta, pannello sotto ma raggiungibile ---------- */
+@media (min-width: 721px) and (max-width: 979px) and (min-height: 541px) {
+  .board-wrap { height: max(460px, calc(100svh - 260px)); }
+}
+@media (prefers-reduced-motion: reduce) { body.pannello .panel { animation: none; } }
+@media (max-width: 720px), (max-height: 540px) and (orientation: landscape) {
+  .brand { flex: none; }
+  h1 { font-size: 22px; white-space: nowrap; }
+  .scene-head { flex: 1 1 auto; min-width: 0; }
+  .tb-tools .seg-btn { font-size: 13px; letter-spacing: 0; }
+  .board-wrap { height: max(360px, calc(100svh - 236px)); }
+  .hud { max-height: calc(100% - 64px); overflow: auto; }
+}

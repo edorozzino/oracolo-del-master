@@ -499,19 +499,31 @@
 
   function renderHud() {
     const t = trova(ui.selezionata), h = $("hud");
+    if (!t || t.id !== ui.tastieraDi) { ui.tastiera = null; ui.tastieraDi = t ? t.id : null; }
     h.hidden = !t;
-    if (!t) return;
+    if (!t) { h.innerHTML = ""; return; }
     h.innerHTML = `
       <div class="hud-head"><canvas class="ritratto big" data-rit="${t.id}"></canvas><span class="hud-who"><b>${esc(t.nome)}</b><small>${esc(descrivi(t))}</small></span>
         <button type="button" class="x" data-hud="chiudi" aria-label="Chiudi">×</button></div>
       <div class="hud-stats">${barraPF(t)}<span class="num">${t.pf}/${t.pfMax} PF</span><span class="num">CA ${t.ca}</span><span class="num">${t.vel} ft</span></div>
       ${t.condizioni.length ? `<div class="chips small">${t.condizioni.map((c) => `<span class="chip on">${esc(c)}</span>`).join("")}</div>` : ""}
+      ${ui.tastiera == null ? `
       <div class="hud-btns">
-        <button type="button" data-hud="-5">−5</button><button type="button" data-hud="-1">−1</button>
-        <button type="button" data-hud="1">+1</button><button type="button" data-hud="5">+5</button>
+        <button type="button" data-hud="-1" aria-label="1 danno">−1</button>
+        <button type="button" data-hud="1" aria-label="Cura 1">+1</button>
+        <button type="button" data-hud="tastiera" class="wide pf">Danno / Cura…</button>
         <button type="button" data-hud="scheda" class="wide">Scheda</button>
         <button type="button" data-hud="rimuovi" class="wide out">Togli</button>
-      </div>`;
+      </div>` : `
+      <div class="keypad">
+        <div class="kp-display"><span class="kp-num">${ui.tastiera || "0"}</span><span class="kp-unit">punti</span>
+          <button type="button" class="x" data-hud="chiudi-tastiera" aria-label="Chiudi il tastierino">×</button></div>
+        <div class="kp-grid">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => `<button type="button" data-hud="cifra:${n}">${n}</button>`).join("")}
+          <button type="button" data-hud="canc" aria-label="Cancella">⌫</button><button type="button" data-hud="cifra:0">0</button>
+          <button type="button" data-hud="cifra:00" aria-label="Doppio zero">00</button></div>
+        <div class="kp-acts"><button type="button" class="kp-danno" data-hud="danno">Danno</button><button type="button" class="kp-cura" data-hud="cura">Cura</button></div>
+      </div>`}`;
+    disegnaRitratti(h);
   }
 
   function renderPalette() {
@@ -825,7 +837,8 @@
     document.body.classList.toggle("gioco", on);
     document.body.classList.remove("pannello");
     $("btn-fs").setAttribute("aria-pressed", on);
-    $("btn-fs").textContent = on ? "Esci" : "Schermo intero";
+    $("btn-fs").textContent = on ? "✕" : "⛶";
+    $("btn-fs").setAttribute("aria-label", on ? "Esci dallo schermo intero" : "Schermo intero");
     $("btn-pannello").setAttribute("aria-pressed", "false");
     requestAnimationFrame(() => requestAnimationFrame(() => tavolo.adatta()));
   }
@@ -846,6 +859,7 @@
   const suFs = () => { if (!fsNativo() && document.body.classList.contains("gioco")) modalitaGioco(false); };
   document.addEventListener("fullscreenchange", suFs);
   document.addEventListener("webkitfullscreenchange", suFs);
+  const compatto = () => matchMedia("(max-width: 720px), (max-height: 540px) and (orientation: landscape)").matches;
   function pannello(on) {
     document.body.classList.toggle("pannello", on);
     $("btn-pannello").setAttribute("aria-pressed", on);
@@ -893,7 +907,7 @@
   });
   $("zoom-in").addEventListener("click", () => tavolo.zoom(1.25));
   $("zoom-out").addEventListener("click", () => tavolo.zoom(0.8));
-  $("zoom-fit").addEventListener("click", () => tavolo.adatta());
+  $("zoom-fit").addEventListener("click", () => { const intera = tavolo.adattaAlterna(); toast(intera ? "Mappa intera" : "Vista comoda"); });
 
   document.querySelector(".tabs").addEventListener("click", (e) => {
     const b = e.target.closest("[role=tab]"); if (!b) return;
@@ -905,7 +919,16 @@
     const v = b.dataset.hud, t = trova(ui.selezionata);
     if (v === "chiudi") { ui.selezionata = null; aggiorna(); }
     else if (v === "rimuovi") rimuovi(t.id);
-    else if (v === "scheda") { if (document.body.classList.contains("gioco")) pannello(true); ui.tab = "pedine"; renderTabs(); $("p-pedine").scrollIntoView({ behavior: "smooth", block: "start" }); }
+    else if (v === "tastiera") { ui.tastiera = ""; renderHud(); return; }
+    else if (v === "chiudi-tastiera") { ui.tastiera = null; renderHud(); return; }
+    else if (v.startsWith("cifra:")) { if (ui.tastiera.length < 3) ui.tastiera = (ui.tastiera + v.slice(6)).replace(/^0+/, ""); renderHud(); return; }
+    else if (v === "canc") { ui.tastiera = ui.tastiera.slice(0, -1); renderHud(); return; }
+    else if (v === "danno" || v === "cura") {
+      const n = parseInt(ui.tastiera, 10);
+      if (!n) { toast("Scrivi prima quanti punti."); return; }
+      ui.tastiera = null; modificaPF(t, v === "danno" ? -n : n); return;
+    }
+    else if (v === "scheda") { if (document.body.classList.contains("gioco") || compatto()) pannello(true); ui.tab = "pedine"; renderTabs(); $("p-pedine").scrollIntoView({ behavior: "smooth", block: "start" }); }
     else modificaPF(t, +v);
   });
 

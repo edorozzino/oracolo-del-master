@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,400;0,700;1,400&family=Alegreya+Sans+SC:wght@500;700&family=IM+Fell+English+SC&display=swap">
-<link rel="stylesheet" href="src/style.css?v=202611052051">
+<link rel="stylesheet" href="src/style.css?v=202611060741">
 </head>
 <body>
 <div class="app">
@@ -30,7 +30,7 @@
   <div class="layout">
     <section class="stage" aria-label="Mappa">
       <div class="toolbar">
-        <div class="seg" role="group" aria-label="Strumento">
+        <div class="seg tb-tools" role="group" aria-label="Strumento">
           <button type="button" id="mode-move" data-modo="muovi" class="seg-btn" aria-pressed="true">Muovi</button>
           <button type="button" id="mode-paint" data-modo="pennello" class="seg-btn" aria-pressed="false">Dipingi</button>
           <button type="button" id="mode-erase" data-modo="gomma" class="seg-btn" aria-pressed="false">Gomma</button>
@@ -45,20 +45,9 @@
           <button type="button" id="view-iso" class="seg-btn" aria-pressed="true">3D</button>
           <button type="button" id="view-top" class="seg-btn" aria-pressed="false">Pianta</button>
         </div>
-        <div class="seg" role="group" aria-label="Ruota la mappa" id="rotazione">
-          <button type="button" class="seg-btn" id="rot-sx" title="Ruota a sinistra (Q)" aria-label="Ruota a sinistra">⟲</button>
-          <span class="rot-bussola" id="rot-bussola" aria-hidden="true"><span>N</span></span>
-          <button type="button" class="seg-btn" id="rot-dx" title="Ruota a destra (E)" aria-label="Ruota a destra">⟳</button>
+        <div class="seg pan-toggle" role="group" aria-label="Pannello">
+          <button type="button" id="btn-pannello" class="seg-btn" aria-pressed="false">☰ Pannello</button>
         </div>
-        <div class="seg only-game" role="group" aria-label="Pannello">
-          <button type="button" id="btn-pannello" class="seg-btn" aria-pressed="false">Pannello</button>
-        </div>
-        <div class="seg" role="group" aria-label="Zoom">
-          <button type="button" id="zoom-out" class="seg-btn" aria-label="Riduci">−</button>
-          <button type="button" id="zoom-fit" class="seg-btn">Adatta</button>
-          <button type="button" id="zoom-in" class="seg-btn" aria-label="Ingrandisci">+</button>
-        </div>
-        <button type="button" id="btn-fs" class="seg-btn fs-btn" aria-pressed="false">Schermo intero</button>
       </div>
 
       <div class="turn-banner" id="turn-banner" hidden>
@@ -67,6 +56,19 @@
       </div>
 
       <div class="board-wrap">
+        <div class="map-ctrls" aria-label="Comandi della mappa">
+          <div class="mc" role="group" aria-label="Ruota la mappa" id="rotazione">
+            <button type="button" id="rot-sx" title="Ruota a sinistra (Q)" aria-label="Ruota a sinistra">⟲</button>
+            <span class="rot-bussola" id="rot-bussola" aria-hidden="true"><span>N</span></span>
+            <button type="button" id="rot-dx" title="Ruota a destra (E)" aria-label="Ruota a destra">⟳</button>
+          </div>
+          <div class="mc" role="group" aria-label="Zoom">
+            <button type="button" id="zoom-out" class="fine-only" aria-label="Riduci">−</button>
+            <button type="button" id="zoom-fit" title="Vista comoda / mappa intera" aria-label="Adatta la vista">⤢</button>
+            <button type="button" id="zoom-in" class="fine-only" aria-label="Ingrandisci">+</button>
+          </div>
+          <div class="mc"><button type="button" id="btn-fs" class="fs-btn" aria-pressed="false" title="Schermo intero" aria-label="Schermo intero">⛶</button></div>
+        </div>
         <canvas id="board" aria-label="Mappa di gioco: trascina le pedine per muoverle"></canvas>
         <div class="hud" id="hud" hidden></div>
         <div class="vassoio" id="vassoio" hidden></div>
@@ -77,7 +79,7 @@
     </section>
 
     <aside class="panel" id="panel">
-      <button type="button" class="panel-close only-game" id="panel-close">Chiudi pannello</button>
+      <button type="button" class="panel-close" id="panel-close" aria-label="Chiudi il pannello"><span class="grip" aria-hidden="true"></span>Chiudi</button>
       <div class="panel-storia">
         <button type="button" class="btn-ghost" data-storia="annulla" disabled>↶ Annulla</button>
         <button type="button" class="btn-ghost" data-storia="ripeti" disabled>Ripeti ↷</button>
@@ -214,13 +216,13 @@
     </aside>
   </div>
 </div>
-<script src="src/data.js?v=202611052051"></script>
-<script src="src/generator.js?v=202611052051"></script>
-<script src="src/bestiario.js?v=202611052051"></script>
-<script src="src/mapgen.js?v=202611052051"></script>
-<script src="src/figure.js?v=202611052051"></script>
-<script src="src/iso.js?v=202611052051"></script>
-<script src="src/board.js?v=202611052051"></script>
-<script src="src/app.js?v=202611052051"></script>
+<script src="src/data.js?v=202611060741"></script>
+<script src="src/generator.js?v=202611060741"></script>
+<script src="src/bestiario.js?v=202611060741"></script>
+<script src="src/mapgen.js?v=202611060741"></script>
+<script src="src/figure.js?v=202611060741"></script>
+<script src="src/iso.js?v=202611060741"></script>
+<script src="src/board.js?v=202611060741"></script>
+<script src="src/app.js?v=202611060741"></script>
 </body>
 </html>

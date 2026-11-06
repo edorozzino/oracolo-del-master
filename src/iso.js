@@ -439,14 +439,18 @@
     return { x: Math.floor((a + b) / 2), y: Math.floor((b - a) / 2) };
   }
   function pedinaIn(px, py, st, view) {
-    const ord = st.pedine.slice().sort((a, b) => (b.x + b.y + 2 * b.taglia) - (a.x + a.y + 2 * a.taglia));
-    for (const t of ord) {
+    // vince la figura più vicina al dito; area minima di tocco 22 px, così anche le figure piccole si prendono
+    let best = null, bd = Infinity;
+    for (const t of st.pedine) {
       const b = baseDi(t, view);
-      const inBase = ((px - b.x) / (b.u * .48)) ** 2 + ((py - b.y) / (b.u * .26)) ** 2 <= 1;
-      const inCorpo = Math.abs(px - b.x) < b.u * .3 && py < b.y && py > b.y - b.u * .95;
-      if (inBase || inCorpo) return t;
+      const rx = Math.max(b.u * .48, 22), ry = Math.max(b.u * .26, 16);
+      const inBase = ((px - b.x) / rx) ** 2 + ((py - b.y) / ry) ** 2 <= 1;
+      const inCorpo = Math.abs(px - b.x) < Math.max(b.u * .3, 18) && py < b.y && py > b.y - Math.max(b.u * .95, 44);
+      if (!inBase && !inCorpo) continue;
+      const d = Math.hypot(px - b.x, py - (b.y - b.u * .35)) - (b.x + b.y) * 1e-6;
+      if (d < bd) { best = t; bd = d; }
     }
-    return null;
+    return best;
   }
   function adatta(w, h, st) {
     const n = st.cols + st.rows;
